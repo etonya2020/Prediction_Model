@@ -1,0 +1,9 @@
+name = "ettylinks-matchday"
+pages_build_output_dir = "public"
+compatibility_date = "2024-09-01"
+
+# Option B (command line) only. Run: npx wrangler d1 create ettylinks-matchday  then paste the id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "ettylinks-matchday"
+database_id = "PASTE-YOUR-D1-ID-HERE"
