@@ -1,6 +1,6 @@
 # Ettylinks Matchday Prediction Model (Cloudflare Workers + static assets + D1)
 # IMPORTANT: "name" must match the name of your Worker project in Cloudflare exactly.
-name = "ettylinks-matchday"
+name = "prediction-model"
 main = "src/worker.js"
 compatibility_date = "2025-01-01"
 keep_vars = true
