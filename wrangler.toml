@@ -3,7 +3,7 @@
 name = "ettylinks-matchday"
 main = "src/worker.js"
 compatibility_date = "2025-01-01"
-
+keep_vars = true
 [assets]
 directory = "./public"
 
