@@ -75,6 +75,11 @@ textarea{width:100%;min-height:110px;font:13px/1.4 ui-monospace,monospace;color:
 .pay{border:1px dashed var(--gold);border-radius:8px;padding:12px;margin:0 0 12px}.pay ol{margin:6px 0 0 18px;padding:0}.pay b{color:var(--goldtext)}
 a.btn{display:inline-flex;align-items:center;background:var(--gold);color:#0D1220;border-radius:8px;padding:10px 18px;font-weight:600;text-decoration:none;min-height:44px}
 input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.lvrow{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;background:var(--bg)}
+.live{background:var(--warn);color:#fff;border-radius:4px;padding:0 6px;font-weight:700;font-size:12px}
+.lvrow table{margin-top:6px;font-size:14px}.lvrow .xg{font-size:26px}
+.hit{color:var(--ok);font-weight:700}.miss{color:var(--warn);font-weight:700}
+.sr{position:absolute;left:-9999px}
 </style>
 </head>
 <body>
@@ -98,6 +103,11 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <input type="date" id="dt" value="2026-10-18">
  <div id="list" class="fxlist" aria-live="polite"></div>
  <p class="note">Data snapshot: 18 Oct 2026 (Premier League, La Liga, Serie A, 10–24 Oct), kept up to date by the developer. Any other league works through the manual match below.</p>
+</section>
+
+<section class="card" id="live">
+ <h2>Live and concluded games</h2>
+ <div id="liveBody" aria-live="polite">Loading…</div>
 </section>
 
 <div id="out" hidden aria-live="polite"></div>
@@ -256,7 +266,7 @@ function summary(){
  document.getElementById("sum").innerHTML=html
 }
 
-// Accounts, payment approval and saved predictions are handled by the server (Cloudflare Pages Functions + D1).
+// Accounts, payment approval and saved predictions are handled by the server (Cloudflare Worker + D1).
 var ME=null,saves=[],mode="login",flash="";
 var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again."};
 var WA="254726960303",noteHtml="";
@@ -302,7 +312,7 @@ function renderAcct(offline){
 }
 async function enter(){
  var r=await api("data");if(r.ok&&r.j&&typeof r.j=="object"){D=r.j;build()}
- renderAcct();document.getElementById("app").hidden=false;list();await loadSaves();devPanel()
+ renderAcct();document.getElementById("app").hidden=false;list();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel()
 }
 async function loadSaves(){var r=await api("saves");saves=r.ok&&r.j.items?r.j.items:[];renderMine()}
 async function saveLast(){
@@ -333,7 +343,7 @@ async function devPanel(){
  var h="<p><b>"+pend.length+"</b> waiting for approval · <b>"+us.length+"</b> accounts</p>";
  h+="<h2>Pending payments</h2>"+(pend.length?"<table><tr><th>Person</th><th>M-Pesa code</th><th>Registered</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td class='n'>"+esc(u.mpesa)+"</td><td>"+esc(dt(u.created))+"</td><td><button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> <button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Reject</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nobody is waiting.</p>");
  h+="<h2 style='margin-top:16px'>All other accounts</h2>"+(rest.length?"<table><tr><th>Person</th><th>Status</th><th>Saved</th><th>Decide</th><th>Message</th></tr>"+rest.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+" · "+esc(u.mpesa)+"</span></td><td>"+esc(u.status)+"</td><td class='n'>"+u.n+"</td><td>"+(u.status=="approved"?"<button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Revoke</button> ":"<button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> ")+"<button class='alt sm' data-d='"+u.id+"'>Remove</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No other accounts yet.</p>");
- h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste the full data JSON (same format as functions/_data.json)'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
+ h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste the full data JSON (same format as src/data.json)'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
  body.innerHTML=h;
  body.querySelectorAll("button[data-a]").forEach(function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.u,status:x.dataset.a});devPanel()}});
  body.querySelectorAll("button[data-d]").forEach(function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions?")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
@@ -346,6 +356,52 @@ async function init(){
  if(r.ok&&r.j&&r.j.role){ME=r.j;await enter();return}
  if(r.status==401){renderAcct();return}
  renderAcct(true)
+}
+// Live and concluded games: server feed (football-data.org) plus the model's own scoring of finished games
+var CODE={PL:"EPL",PD:"LL",SA:"SA"},LIVE=null,LERR="";
+function nz(n){return String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g,"and").replace(/manchester/g,"man").replace(/nottingham/g,"nottm").replace(/\b(fc|afc|cf|ac|as|ssc|ud|rcd|cd|de|club|calcio|1909)\b/g,"").replace(/[^a-z0-9]+/g," ").trim()}
+function findTeam(k,names){var T=D[k].t,ns=names.map(nz).filter(Boolean),part=[];
+ for(var ab in T){var d=nz(T[ab][0]);for(var i=0;i<ns.length;i++){if(ns[i]==d)return ab;if(ns[i].indexOf(d+" ")==0||d.indexOf(ns[i]+" ")==0)part.push(ab)}}
+ var u=part.filter(function(x,i){return part.indexOf(x)==i});return u.length==1?u[0]:null}
+function mfor(k,ha,aa,ko){var h=info(k,ha,ko),a=info(k,aa,ko),l=lgAvg(k);return{h:h,a:a,r:calc({hf:h.gf,hg:h.n,ha:h.ga,hp:h.form,hi:0,af:a.gf,ag:a.n,aa:a.ga,ap:a.form,ai:0,LH:l[0],LA:l[1],FH:h.fat,FA:a.fat},h.name,a.name)}}
+function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,bt=0,o=0,i,j;
+ for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p;if(H>0&&A>0)bt+=p;if(H+A>2)o+=p}
+ var t=h+d+a;return{H:h/t,D:d/t,A:a/t,bt:bt/t,o:o/t}}
+function frac(m){var e;if(m.m!=null)e=m.m;else if(m.s=="PAUSED")e=45;else{e=(Date.now()-new Date(m.t))/6e4;if(e>62)e-=15}return Math.max(0,Math.min(e,90))/90}
+function evalGame(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",c=r.dc[0];return{act:act,res:r.key==act,dc:c.indexOf("1X")==0?act!="A":c.indexOf("X2")==0?act!="H":act!="D",bt:(r.bt>=0.5)==(hs>0&&as>0),ov:(r.o25>=0.5)==(hs+as>2)}}
+function mark(ok){return ok?'<span class="hit">✓<span class="sr"> hit</span></span>':'<span class="miss">✗<span class="sr"> miss</span></span>'}
+function teamsOf(m){var k=CODE[m.c];if(!(k&&D[k]))return null;var a=findTeam(k,[m.h,m.hn]),b=findTeam(k,[m.a,m.an]);return a&&b?{k:k,a:a,b:b}:null}
+function liveRow(m){
+ var tm=teamsOf(m),gh=m.hs==null?0:m.hs,ga=m.as==null?0:m.as,f=frac(m),lab=m.m!=null?m.m+"’":m.s=="PAUSED"?"HT":"about "+Math.round(f*90)+"’";
+ var h='<div class="lvrow"><b>'+esc(m.cn||"")+'</b> <span class="live">LIVE</span> '+lab+'<br><span class="xg">'+esc(m.h)+" "+gh+" – "+ga+" "+esc(m.a)+"</span>";
+ if(tm){var md=mfor(tm.k,tm.a,tm.b,new Date(m.t)),r=md.r,lp=liveProb(r.lh,r.la,f,gh,ga),dl=Math.round((lp[r.key]-(r.key=="H"?r.h:r.key=="D"?r.d:r.a))*100);
+  h+="<table><tr><th></th><th>"+esc(m.h)+"</th><th>Draw</th><th>"+esc(m.a)+"</th></tr><tr><td>Before kick-off</td><td class='n'>"+pc(r.h)+"%</td><td class='n'>"+pc(r.d)+"%</td><td class='n'>"+pc(r.a)+"%</td></tr><tr><td>Live now</td><td class='n'>"+pc(lp.H)+"%</td><td class='n'>"+pc(lp.D)+"%</td><td class='n'>"+pc(lp.A)+"%</td></tr></table>"
+  +"<p style='margin:6px 0 0;font-size:14px'>Pre-match lean was <b>"+esc(r.side)+"</b> ("+pc(r.top)+"%). Its chance is now "+pc(lp[r.key])+"% ("+(dl>=0?"+":"")+dl+" points). Both teams to score: "+pc(lp.bt)+"%. Over 2.5 goals: "+pc(lp.o)+"%.</p>"}
+ else h+='<p class="mid" style="margin:6px 0 0;font-size:14px">No model for this league in the data, so only the score is shown.</p>';
+ return h+"</div>"}
+function finRow(g,T){
+ var h='<div class="lvrow"><b>'+esc(g.cn||"")+'</b> <span class="mid">'+esc(g.when||"")+'</span><br><span class="xg">'+esc(g.h)+" "+g.hs+" – "+g.as+" "+esc(g.a)+"</span>";
+ if(g.k&&g.ha){var md=mfor(g.k,g.ha,g.ba,g.ko),r=md.r,e=evalGame(r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++;
+  h+="<p style='margin:6px 0 0;font-size:14px'>Model before the game: <b>"+esc(r.side)+"</b> "+pc(r.top)+"% "+mark(e.res)+" · Double chance "+esc(r.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+((r.bt>=0.5)?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+((r.o25>=0.5)?"Yes":"No")+" "+mark(e.ov)+"</p>"}
+ return h+"</div>"}
+async function loadLive(){var r=await api("live");if(r.ok&&r.j&&r.j.matches){LIVE=r.j;LERR=""}else{LIVE=null;LERR=(r.j&&r.j.error)||"error"}renderLive()}
+function renderLive(){
+ var b=document.getElementById("liveBody"),h="",T={n:0,res:0,dc:0,bt:0,ov:0},now=Date.now();
+ if(LIVE){h+='<p class="mid" style="margin:0">Updated '+ht(new Date(LIVE.at))+(LIVE.stale?" (source busy, showing older data)":"")+'. Refreshes every minute while this page is open. On the free data plan, scores can be delayed.</p>';
+  var lv=LIVE.matches.filter(function(m){return m.s=="IN_PLAY"||m.s=="PAUSED"}).sort(function(a,c){return new Date(a.t)-new Date(c.t)});
+  h+="<h2 style='margin-top:14px'>Live now</h2>"+(lv.length?lv.map(liveRow).join(""):"<p class='mid'>No games in play right now.</p>");
+  var fin=LIVE.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&now-new Date(m.t)<1.5*864e5}).sort(function(a,c){return new Date(c.t)-new Date(a.t)});
+  h+="<h2 style='margin-top:14px'>Concluded games</h2>"+(fin.length?fin.map(function(m){var tm=teamsOf(m);return finRow({cn:m.cn,h:m.h,a:m.a,hs:m.hs,as:m.as,k:tm&&tm.k,ha:tm&&tm.a,ba:tm&&tm.b,ko:new Date(m.t),when:new Date(m.t).toLocaleString()},T)}).join(""):"<p class='mid'>No finished games in the last 36 hours.</p>")}
+ else{h+='<p class="note" style="margin-top:0">'+(LERR=="no_key"?"The live feed is not connected yet. Add FOOTBALL_DATA_KEY in Cloudflare (see README.txt). Meanwhile this shows how the model scored the finished games saved in the data.":LERR=="rate"?"The data source is busy. Try again in a minute. Showing saved results.":"Live data is not available right now. Showing saved results.")+"</p>";
+  var all=[];Object.keys(D).forEach(function(k){R[k].forEach(function(g){all.push({cn:D[k].n,h:D[k].t[g.h][0],a:D[k].t[g.a][0],hs:g.x[0],as:g.x[1],k:k,ha:g.h,ba:g.a,ko:g.t,when:g.t.toLocaleString()})})});
+  all.sort(function(a,c){return c.ko-a.ko});
+  var shown=all.slice(0,6).map(function(g){return finRow(g,{n:0,res:0,dc:0,bt:0,ov:0})}).join("");
+  all.forEach(function(g){var e=evalGame(mfor(g.k,g.ha,g.ba,g.ko).r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++});
+  h+="<h2>Latest saved results</h2>"+shown}
+ if(T.n){function q(x){return x+"/"+T.n+" ("+Math.round(100*x/T.n)+"%)"}
+  h+="<div class='note'><b>Model record on these concluded games:</b> result "+q(T.res)+" · double chance "+q(T.dc)+" · both teams to score "+q(T.bt)+" · over/under 2.5 "+q(T.ov)+". Each game is scored using only the data that existed before kick-off. A small sample like this says little, so judge the model over hundreds of games, not a handful.</div>"}
+ h+='<p><button class="alt" id="lvr">Refresh now</button></p>';
+ b.innerHTML=h;document.getElementById("lvr").onclick=loadLive
 }
 document.getElementById("go").onclick=run;
 document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};

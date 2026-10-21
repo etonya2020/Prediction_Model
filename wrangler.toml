@@ -1,9 +1,14 @@
+# Ettylinks Matchday Prediction Model (Cloudflare Workers + static assets + D1)
+# IMPORTANT: "name" must match the name of your Worker project in Cloudflare exactly.
 name = "ettylinks-matchday"
-pages_build_output_dir = "public"
-compatibility_date = "2024-09-01"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
 
-# Option B (command line) only. Run: npx wrangler d1 create ettylinks-matchday  then paste the id below.
+[assets]
+directory = "./public"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ettylinks-matchday"
-database_id = "PASTE-YOUR-D1-ID-HERE"
+# Paste your D1 Database ID here (Cloudflare > Storage & databases > D1 > your database)
+database_id = "PASTE-YOUR-D1-DATABASE-ID-HERE"
