@@ -29,6 +29,7 @@ const clip=(v,n)=>String(v??"").slice(0,n);
 async function handle(request,env){
  if(!env.DB)return J({error:"no_db"},503);
  await ensure(env.DB);const db=env.DB;
+ const AE=String(env.ADMIN_EMAIL||"").trim().toLowerCase(),AP=String(env.ADMIN_PASSWORD||"").trim();
  const url=new URL(request.url),p=url.pathname.replace(/^\/api\/?/,"").replace(/\/$/,""),m=request.method;
  if(m!=="GET"){const o=request.headers.get("origin");if(o&&new URL(o).host!==url.host)return J({error:"forbidden"},403)}
  let b={};if(m==="POST"){try{b=await request.json()}catch{b={}}}
@@ -49,15 +50,15 @@ async function handle(request,env){
   const em=clip(b.email,120).trim().toLowerCase(),pw=String(b.password||"").slice(0,200);
   if(await blocked(db,em))return J({error:"slow"},429);
   let role,uid=0;
-  if(env.ADMIN_EMAIL&&env.ADMIN_PASSWORD&&eq(em,String(env.ADMIN_EMAIL).trim().toLowerCase())&&eq(pw,env.ADMIN_PASSWORD)){role="admin"}
+  if(AE&&AP&&eq(em,AE)&&eq(pw.trim(),AP)){role="admin"}
   else{const u=await db.prepare("SELECT * FROM users WHERE email=?").bind(em).first();
-   if(!u||!eq(await pbk(pw,u.salt),u.hash)){await fail(db,em);return J({error:"bad"},401)}
+   if(!u||!eq(await pbk(pw,u.salt),u.hash)){await fail(db,em);return J({error:"bad",admin_set:!!(AE&&AP)},401)}
    if(u.status!=="approved")return J({error:u.status,name:u.name,code:u.mpesa},403);
    role="user";uid=u.id}
   await db.prepare("DELETE FROM fails WHERE k=?").bind(em).run();
   await db.prepare("DELETE FROM sessions WHERE exp<?").bind(Date.now()).run();
   const tok=rnd(24);await db.prepare("INSERT INTO sessions(token,uid,role,exp) VALUES(?,?,?,?)").bind(tok,uid,role,Date.now()+2592e6).run();
-  const who=role==="admin"?{role,name:"Developer",email:String(env.ADMIN_EMAIL)}:await db.prepare("SELECT 'user' role,name,email FROM users WHERE id=?").bind(uid).first();
+  const who=role==="admin"?{role,name:"Developer",email:AE}:await db.prepare("SELECT 'user' role,name,email FROM users WHERE id=?").bind(uid).first();
   return J(who,200,{"set-cookie":`mm=${tok}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`})}
  if(p==="logout"&&m==="POST"){
   const c=(request.headers.get("cookie")||"").match(/(?:^|;\s*)mm=([a-f0-9]{48})/);if(c)await db.prepare("DELETE FROM sessions WHERE token=?").bind(c[1]).run();
