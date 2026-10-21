@@ -304,7 +304,7 @@ function renderAcct(offline){
   if(reg){nm=document.getElementById("un").value.trim();cd=document.getElementById("uc").value.trim().toUpperCase();
    r=await api("register",{name:nm,email:em,password:pw,code:cd,phone:document.getElementById("uh").value.trim()})}
   else r=await api("login",{email:em,password:pw});
-  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"")}else m.textContent=ERR[e]||"Could not complete that. Try again.";return}
+  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"")}else m.textContent=(ERR[e]||"Could not complete that. Try again.")+(e=="bad"&&r.j.admin_set===false?" Note for the developer: ADMIN_EMAIL and ADMIN_PASSWORD are not set on the server yet.":"");return}
   if(reg){mode="login";noteHtml=statusHtml("registered",nm,cd);renderAcct();return}
   ME=r.j;await enter()}
  document.getElementById("af").onsubmit=function(e){e.preventDefault();go()};
