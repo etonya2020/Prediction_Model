@@ -11,4 +11,4 @@ directory = "./public"
 binding = "DB"
 database_name = "ettylinks-matchday"
 # Paste your D1 Database ID here (Cloudflare > Storage & databases > D1 > your database)
-database_id = "PASTE-YOUR-D1-DATABASE-ID-HERE"
+database_id = "1709ff7d-de1b-471c-9d84-ffc93eda1b88"
