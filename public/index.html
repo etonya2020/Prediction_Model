@@ -39,7 +39,7 @@ button{font:600 16px "Barlow",sans-serif;background:var(--gold);color:#0D1220;bo
 button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button.sm{padding:4px 10px;font-size:13px}
 .fx{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--bg);color:var(--ink);border:1px solid var(--line);margin-top:8px;font-weight:500}
-.fx b{font:700 18px "Barlow Condensed",sans-serif;min-width:48px}.fx small{color:var(--mute)}
+.fx b{font:700 18px "Barlow Condensed",sans-serif;min-width:48px}.fx small{color:var(--mute);margin-left:auto}
 .fx[aria-pressed=true]{border:2px solid var(--gold)}
 .strip{display:flex;height:54px;border-radius:8px;overflow:hidden;border:2px solid var(--ink)}
 .strip div{display:flex;align-items:center;justify-content:center;font:700 20px "Barlow Condensed",sans-serif}
@@ -80,8 +80,7 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 .lvrow table{margin-top:6px;font-size:14px}.lvrow .xg{font-size:26px}
 .hit{color:var(--ok);font-weight:700}.miss{color:var(--warn);font-weight:700}
 .sr{position:absolute;left:-9999px}
-.dnav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dnav input{flex:1;min-width:130px;width:auto}.dnav button{padding:10px 14px}.dnav #prev,.dnav #next{font-size:22px;line-height:1;padding:8px 16px}
-.fxm{flex:1;min-width:0}.fxm small{margin-left:0}.fxr{text-align:right;white-space:nowrap}.fx .sc{font-size:20px}
+.lgh{grid-column:1/-1;margin:14px 0 0;font:700 18px "Barlow Condensed",sans-serif;color:var(--goldtext)}
 </style>
 </head>
 <body>
@@ -102,23 +101,31 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 <section class="card">
  <h2>Match day</h2>
  <label for="dt">Date</label>
- <div class="dnav"><button type="button" class="alt" id="prev" aria-label="Previous day" title="Previous day">‹</button><input type="date" id="dt"><button type="button" class="alt" id="today">Today</button><button type="button" class="alt" id="next" aria-label="Next day" title="Next day">›</button></div>
+ <input type="date" id="dt" value="2026-10-18">
  <div id="list" class="fxlist" aria-live="polite"></div>
- <p class="note">Games load from football-data.org for any date, for the competitions on its free plan (Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Championship, Eredivisie, Primeira Liga, Brasileirão, Champions League, European Championship, World Cup). Games that have finished show whether the model’s call was a hit or a miss. Other leagues work through the manual match below.</p>
+ <p class="note">Games load automatically for the date you pick, from the leagues your data feed covers. If the feed is not connected, a saved snapshot is shown instead. Any other league works through the manual match below.</p>
 </section>
 
-<section class="card" id="rec">
- <h2>Model track record</h2>
- <label for="rp">Period</label>
- <select id="rp"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="0">All time</option></select>
- <div id="recBody" aria-live="polite">Loading…</div>
+<section class="card" id="live">
+ <h2>Live and concluded games</h2>
+ <div id="liveBody" aria-live="polite">Loading…</div>
 </section>
 
 <div id="out" hidden aria-live="polite"></div>
 
 <section class="card">
- <h2>Predictions for this match day</h2>
+ <h2>System prediction summary</h2>
+ <label for="sc">Scope</label>
+ <select id="sc"><option value="day">Selected match day</option><option value="all">All loaded games (a day either side)</option></select>
  <div id="sum" class="scroll"></div>
+</section>
+
+<section class="card" id="hist">
+ <h2>Past results and model record</h2>
+ <label for="hd">Look back</label>
+ <select id="hd"><option value="3">3 days</option><option value="7" selected>7 days</option></select>
+ <p><button id="hb">Check how predictions did</button></p>
+ <div id="histBody" class="scroll"></div>
 </section>
 
 <section class="card">
@@ -164,7 +171,10 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <p>Contact: <a href="tel:0786317916">0786317916</a> · <a href="tel:+254726960303">+254 726 960 303</a></p>
 </footer>
 <script>
-var GM=[],CUR=null,PEND=[],GERR="",STALE=false,RETRY=0,RT=null,LOADING=0,FINN=-1,RES="",ctx="",FH=1,FA=1,last=null;
+var D={};
+function G(k,s){var p=s.split(" ");return{k:k,t:new Date(p[0]+":00Z"),h:p[1],a:p[2],x:p.slice(3).map(Number)}}
+var R={},FX={},ALL=[],ctx="",PROV=null,FH=1,FA=1,LK=null,last=null;
+function build(){R={};FX={};ALL=[];Object.keys(D).forEach(function(k){R[k]=D[k].r.map(function(s){return G(k,s)});FX[k]=D[k].f.map(function(s){return G(k,s)});FX[k].forEach(function(g){ALL.push(g)})})}build();
 function z(n){return(n<10?"0":"")+n}
 function ld(d){return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())}
 function ht(d){return z(d.getHours())+":"+z(d.getMinutes())}
@@ -178,6 +188,19 @@ function P(k,l){return Math.exp(-l)*Math.pow(l,k)/F[k]}
 function tau(i,j,a,b,r){if(i==0&&j==0)return 1-a*b*r;if(i==0&&j==1)return 1+a*r;if(i==1&&j==0)return 1+b*r;if(i==1&&j==1)return 1-r;return 1}
 ["hi","ai"].forEach(function(id){document.getElementById(id).oninput=function(){document.getElementById(id+"v").textContent=this.value}});
 
+function lgAvg(k,ko){var h=0,a=0,n=0;R[k].forEach(function(g){if(!ko||g.t<ko){h+=g.x[0];a+=g.x[1];n++}});return[(h+15)/(n+10),(a+12)/(n+10)]}
+function info(k,ab,ko){
+ var tb=D[k].t[ab],dyn=D[k].dyn,res=R[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t<ko}).sort(function(a,b){return a.t-b.t}),gf=0,ga=0,pts=0,p5=0,lines=[];
+ res.forEach(function(g,i){var home=g.h==ab,f=home?g.x[0]:g.x[1],a=home?g.x[1]:g.x[0],o=(D[k].t[home?g.a:g.h]||["?"])[0],pp=f>a?3:f==a?1:0;gf+=f;ga+=a;pts+=pp;if(i>=res.length-5)p5+=pp;lines.push((f>a?"W":f==a?"D":"L")+" "+f+"-"+a+(home?" v ":" at ")+o)});
+ var ppg=dyn?(res.length?pts/res.length:1.4):tb[2]/tb[3],wp=res.length?(dyn?p5/Math.min(5,res.length):pts/res.length):ppg,form=5*(0.5*ppg+0.5*wp);
+ var prev=res.length?(ko-res[res.length-1].t)/864e5:null;
+ var nx=FX[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t>ko}).sort(function(a,b){return a.t-b.t})[0];
+ var nd=nx?(nx.t-ko)/864e5:null,fat=1,flags=[];
+ if(prev!==null&&prev<3.5){fat*=0.97;flags.push("only "+Math.round(prev)+" days of rest")}
+ if(nd!==null&&nd<3.5){fat*=0.98;flags.push("plays again in "+Math.round(nd)+" days, so rotation is possible")}
+ return{name:tb[0],rank:dyn?0:tb[1],pts:dyn?pts:tb[2],gp:dyn?res.length:tb[3],n:res.length,gf:gf,ga:ga,form:form,lines:lines.slice(-4),fat:fat,flags:flags,next:nx?((D[k].t[nx.h==ab?nx.a:nx.h]||["?"])[0]+(nx.h==ab?" (home) ":" (away) ")+ld(nx.t)):"none in the data"}
+}
+function rankAt(k,ab,ko){var Pt={},Gd={};R[k].forEach(function(g){if(g.t>=ko)return;var x=g.x[0],y=g.x[1];Pt[g.h]=(Pt[g.h]||0)+(x>y?3:x==y?1:0);Pt[g.a]=(Pt[g.a]||0)+(y>x?3:x==y?1:0);Gd[g.h]=(Gd[g.h]||0)+x-y;Gd[g.a]=(Gd[g.a]||0)+y-x});var arr=Object.keys(Pt).sort(function(a,b){return Pt[b]-Pt[a]||Gd[b]-Gd[a]}),i=arr.indexOf(String(ab));return i<0?0:i+1}
 // Core model: shrunk goal rates, form, fatigue, injuries, then a Dixon-Coles style Poisson grid
 function calc(p,hn,an){
  var K=5,AV=(p.LH+p.LA)/2;
@@ -194,64 +217,43 @@ function calc(p,hn,an){
 }
 function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),af:v("af"),ag:v("ag"),aa:v("aa"),ap:v("ap"),ai:v("ai"),LH:v("lh"),LA:v("la"),FH:FH,FA:FA}}
 
-// ---- Match day: games for the chosen date come from the server (football-data.org), with the model's call and, once finished, hit or miss
-var GMSG={no_key:"The football data feed is not connected yet. The developer needs to add FOOTBALL_DATA_KEY in Cloudflare (see README.txt).",key:"football-data.org did not accept the API key, or the plan does not include this data. The developer should check FOOTBALL_DATA_KEY.",rate:"The data source is busy (the free plan allows 10 requests a minute). Try again in a minute.",api:"Could not reach football-data.org right now. Try again shortly.",bad_date:"Pick a valid date.",error:"Could not load games. Check your connection and try again."};
-function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,i,j;
- for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p}
- var t=h+d+a;return{H:h/t,D:d/t,A:a/t}}
-function frac(g){var e;if(g.m!=null)e=g.m;else if(g.s=="PAUSED")e=45;else{e=(Date.now()-new Date(g.t))/6e4;if(e>62)e-=15}return Math.max(0,Math.min(e,90))/90}
-function isLive(g){return g.s=="IN_PLAY"||g.s=="PAUSED"}
-function isDone(g){return g.s=="FINISHED"&&g.hs!=null&&g.as!=null}
-function mark(ok){return ok?'<span class="hit">✓<span class="sr"> hit</span></span>':'<span class="miss">✗<span class="sr"> miss</span></span>'}
-function srcNote(g){return g.src=="live"?"Called before kick-off and locked in the record.":"Re-run afterwards using only results from before kick-off (a backtest, not a live call)."}
+var DYN=false,SNAP=null,META={},MSG="",RETRY=null;
 function list(){
- var box=document.getElementById("list"),d=document.getElementById("dt").value,h="";
- box.innerHTML="";
- if(GERR){box.innerHTML='<p class="note">'+esc(GMSG[GERR]||GMSG.error)+"</p>";summary();return}
- if(!GM.length)box.innerHTML='<p class="note">No games on this date in the covered competitions. Try another date.</p>';
- if(PEND.length)box.insertAdjacentHTML("afterbegin",'<p class="note">Still loading team data for '+esc(PEND.join(", "))+'. Those games show up without a prediction for now; this page retries automatically.</p>');
- if(STALE)box.insertAdjacentHTML("afterbegin",'<p class="note">The data source is not answering, so this is the last saved copy.</p>');
- GM.forEach(function(g){var b=document.createElement("button"),r="",p=g.p,sub=esc(g.cn)+(p?" · "+esc(p.side)+" "+pc(p.top)+"%":" · no model data yet");
-  if(isDone(g))r='<b class="sc">'+g.hs+"–"+g.as+"</b>"+(g.ev?" "+mark(g.ev.res):"");
-  else if(isLive(g)){r='<span class="live">LIVE</span> '+(g.m!=null?g.m+"’":g.s=="PAUSED"?"HT":"")+' <b class="sc">'+(g.hs==null?0:g.hs)+"–"+(g.as==null?0:g.as)+"</b>";
-   if(p){var lp=liveProb(p.lh,p.la,frac(g),g.hs||0,g.as||0);sub+="<br>Live chances: "+esc(g.h.n)+" "+pc(lp.H)+"%, draw "+pc(lp.D)+"%, "+esc(g.a.n)+" "+pc(lp.A)+"%"}}
-  else if(g.s=="POSTPONED"||g.s=="CANCELLED"||g.s=="SUSPENDED")r='<span class="mid">'+esc(g.s.toLowerCase())+"</span>";
-  b.className="fx";b.setAttribute("aria-pressed",String(!!CUR&&CUR.id==g.id));
-  b.innerHTML="<b>"+ht(new Date(g.t))+'</b><span class="fxm">'+esc(g.h.n)+" v "+esc(g.a.n)+'<br><small class="mid">'+sub+'</small></span><span class="fxr">'+r+"</span>";
+ var d=document.getElementById("dt").value,items=ALL.filter(function(g){return ld(g.t)==d}).sort(function(a,b){var x=D[a.k].n,y=D[b.k].n;return x<y?-1:x>y?1:a.t-b.t}),box=document.getElementById("list"),cur="";
+ box.innerHTML=MSG?'<p class="note">'+esc(MSG)+"</p>":"";
+ if(!items.length)box.innerHTML+='<p class="note">No games found for this date'+(DYN?" in the leagues your data plan covers.":" in the saved snapshot (10–24 Oct 2026). Connect the live feed (README) to load any date.")+"</p>";
+ items.forEach(function(g){
+  if(D[g.k].n!=cur){cur=D[g.k].n;var hd=document.createElement("h3");hd.className="lgh";hd.textContent=cur;box.appendChild(hd)}
+  var b=document.createElement("button"),mt=META[g.x[3]],st="";
+  if(mt&&mt.s=="FINISHED"&&mt.hs!=null)st="FT "+mt.hs+"–"+mt.as+" "+mark(evalGame(mfor(g.k,g.h,g.a,g.t).r,mt.hs,mt.as).res);
+  else if(mt&&(mt.s=="IN_PLAY"||mt.s=="PAUSED"))st='<span class="live">LIVE</span> '+(mt.hs==null?0:mt.hs)+"–"+(mt.as==null?0:mt.as);
+  else if(mt&&(mt.s=="POSTPONED"||mt.s=="CANCELLED"||mt.s=="SUSPENDED"))st=mt.s.toLowerCase();
+  b.className="fx";b.setAttribute("aria-pressed","false");
+  b.innerHTML="<b>"+ht(g.t)+"</b><span>"+esc(D[g.k].t[g.h][0])+" v "+esc(D[g.k].t[g.a][0])+"</span><small>"+st+"</small>";
   b.onclick=function(){box.querySelectorAll(".fx").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");pick(g)};box.appendChild(b)});
  summary()
 }
 function pick(g){
- CUR=g;var p=g.p,o=document.getElementById("out");
- if(!p){ctx="";RES="";o.hidden=false;o.innerHTML='<section class="card"><h2>'+esc(g.h.n)+" v "+esc(g.a.n)+'</h2><p class="note" style="margin-top:0">No prediction yet: team data for this competition is still loading, or the game is not scheduled. Check again in a minute.</p></section>';return}
- var i=p.inp;
- sv("hn",g.h.n);sv("hg",i.hg);sv("hf",i.hf);sv("ha",i.ha);sv("hp",i.hp);sv("hi",0);document.getElementById("hiv").textContent="0";
- sv("an",g.a.n);sv("ag",i.ag);sv("af",i.af);sv("aa",i.aa);sv("ap",i.ap);sv("ai",0);document.getElementById("aiv").textContent="0";
- sv("lh",i.LH);sv("la",i.LA);FH=i.FH;FA=i.FA;
- function box(t,c){return"<p><b>"+esc(t)+"</b>: "+(c.rank?c.rank+ordn(c.rank)+" on "+c.pts+" pts from "+c.gp+" games. ":c.gp+" games played, "+c.pts+" pts. ")+"Last results: "+(esc(c.lines.join("; "))||"none yet")+". Next: "+esc(c.next)+"."+(c.flags.length?' <span class="bad">Flag: '+esc(c.flags.join("; "))+".</span>":"")+"</p>"}
- ctx='<div class="ctx">'+box(g.h.n,p.ctx.h)+box(g.a.n,p.ctx.a)+"</div>";
- RES=resultBlock(g);run()
+ var h=info(g.k,g.h,g.t),a=info(g.k,g.a,g.t),l=lgAvg(g.k,g.t);LK=g.k;
+ if(D[g.k].dyn){h.rank=rankAt(g.k,g.h,g.t);a.rank=rankAt(g.k,g.a,g.t)}
+ sv("hn",h.name);sv("hg",h.n);sv("hf",h.gf);sv("ha",h.ga);sv("hp",h.form.toFixed(1));
+ sv("an",a.name);sv("ag",a.n);sv("af",a.gf);sv("aa",a.ga);sv("ap",a.form.toFixed(1));
+ sv("lh",l[0].toFixed(2));sv("la",l[1].toFixed(2));
+ FH=h.fat;FA=a.fat;PROV=g.x;
+ function box(t,i){return"<p><b>"+esc(t)+"</b>: "+(i.rank?i.rank+ordn(i.rank)+" on ":"")+i.pts+" pts from "+i.gp+" games. Last results: "+(esc(i.lines.join("; "))||"none in the data")+". Next: "+esc(i.next)+"."+(i.flags.length?' <span class="bad">Flag: '+i.flags.join("; ")+".</span>":"")+"</p>"}
+ var mt=META[g.x[3]],res="";
+ if(mt&&mt.s=="FINISHED"&&mt.hs!=null){var r0=mfor(g.k,g.h,g.a,g.t).r,e=evalGame(r0,mt.hs,mt.as);
+  res="<p><b>Final score: "+esc(h.name)+" "+mt.hs+" – "+mt.as+" "+esc(a.name)+".</b> Model before the game: "+esc(r0.side)+" "+pc(r0.top)+"% "+mark(e.res)+" · Double chance "+esc(r0.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+(r0.bt>=0.5?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+(r0.o25>=0.5?"Yes":"No")+" "+mark(e.ov)+"</p>"}
+ else if(mt&&(mt.s=="IN_PLAY"||mt.s=="PAUSED"))res="<p><b>In play: "+esc(h.name)+" "+(mt.hs==null?0:mt.hs)+" – "+(mt.as==null?0:mt.as)+" "+esc(a.name)+".</b> The Live card has in-play chances.</p>";
+ ctx='<div class="ctx">'+res+box(h.name,h)+box(a.name,a)+"</div>";
+ run()
 }
-function resultBlock(g){var p=g.p,h="";
- if(isDone(g)&&g.ev){var e=g.ev;
-  h+='<h2 style="margin-top:14px">Recorded prediction v result</h2><p style="margin:0 0 6px"><span class="xg">'+esc(g.h.n)+" "+g.hs+" – "+g.as+" "+esc(g.a.n)+'</span> <span class="mid">(90 minutes)</span></p>'
-  +"<table><tr><th>Market</th><th>Model said</th><th>Result</th></tr>"
-  +"<tr><td>Result</td><td>"+esc(p.side)+" "+pc(p.top)+"%</td><td>"+mark(e.res)+"</td></tr>"
-  +"<tr><td>Double chance</td><td>"+esc(p.dc.split(" ")[0])+" "+pc(p.dcp)+"%</td><td>"+mark(e.dc)+"</td></tr>"
-  +"<tr><td>Both teams to score</td><td>"+(p.bt>=0.5?"Yes":"No")+" ("+pc(p.bt>=0.5?p.bt:1-p.bt)+"%)</td><td>"+mark(e.bt)+"</td></tr>"
-  +"<tr><td>Over/under 2.5</td><td>"+(p.o25>=0.5?"Over":"Under")+" ("+pc(p.o25>=0.5?p.o25:1-p.o25)+"%)</td><td>"+mark(e.ov)+"</td></tr></table>"
-  +'<p class="note">'+srcNote(g)+" A hit on one game proves little; judge the model on the track record below.</p>"}
- else if(isLive(g)){var lp=liveProb(p.lh,p.la,frac(g),g.hs||0,g.as||0);
-  h+='<h2 style="margin-top:14px">Live now <span class="live">LIVE</span></h2><p style="margin:0 0 6px"><span class="xg">'+esc(g.h.n)+" "+(g.hs||0)+" – "+(g.as||0)+" "+esc(g.a.n)+"</span> "+(g.m!=null?g.m+"’":g.s=="PAUSED"?"HT":"")+"</p>"
-  +"<table><tr><th></th><th>"+esc(g.h.n)+"</th><th>Draw</th><th>"+esc(g.a.n)+"</th></tr><tr><td>Before kick-off</td><td class='n'>"+pc(p.h)+"%</td><td class='n'>"+pc(p.d)+"%</td><td class='n'>"+pc(p.a)+"%</td></tr><tr><td>Live now</td><td class='n'>"+pc(lp.H)+"%</td><td class='n'>"+pc(lp.D)+"%</td><td class='n'>"+pc(lp.A)+"%</td></tr></table>"
-  +'<p class="note">The pre-match call is locked in the record. Live chances use the clock and score; free-plan scores can be delayed.</p>'}
- else if(g.s=="SCHEDULED"||g.s=="TIMED")h+='<p class="note">This prediction is refreshed as new results arrive and is locked in at kick-off. Afterwards the game shows here as a hit or a miss.</p>';
- return h}
 function run(){
  var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;
  function tag(p,hi,lo){return p>=hi?'<span class="tag good">Strong lean</span>':p>=lo?'<span class="tag mid">Slight lean</span>':'<span class="tag bad">Too close</span>'}
  function row(n,p,hi,lo){return"<tr><td>"+n+'</td><td class="n">'+pc(p)+"%</td><td>"+tag(p,hi,lo)+"</td></tr>"}
- last={t:Date.now(),d:document.getElementById("dt").value,l:CUR?CUR.cn:"Manual",m:hn+" v "+an,p:r.side,h:pc(h),x:pc(d),a:pc(a),dc:r.dc[0],bt:pc(r.bt),o:pc(r.o25)};
+ var pv=PROV&&(PROV[0]+PROV[1]+PROV[2])>0?'<p class="note">Data provider’s own model: '+esc(hn)+" "+Math.round(PROV[0])+"%, draw "+Math.round(PROV[1])+"%, "+esc(an)+" "+Math.round(PROV[2])+"%. Where it and this model agree, the call is sturdier.</p>":"";
+ last={t:Date.now(),d:document.getElementById("dt").value,l:LK?D[LK].n:"Manual",m:hn+" v "+an,p:r.side,h:pc(h),x:pc(d),a:pc(a),dc:r.dc[0],bt:pc(r.bt),o:pc(r.o25)};
  var o=document.getElementById("out");o.hidden=false;
  o.innerHTML='<section class="card"><h2>'+esc(hn)+" v "+esc(an)+"</h2>"+ctx
  +'<div class="strip" role="img" aria-label="Win probabilities"><div class="h" style="width:'+h*100+'%">'+pc(h)+'%</div><div class="d" style="width:'+d*100+'%">'+pc(d)+'%</div><div class="a" style="width:'+a*100+'%">'+pc(a)+"%</div></div>"
@@ -260,27 +262,33 @@ function run(){
  +row("Most likely result: "+esc(r.side),r.top,0.55,0.45)+row("Double chance: "+esc(r.dc[0]),r.dc[1],0.80,0.70)
  +row("Both teams to score: Yes",r.bt,0.60,0.52)+row("Both teams to score: No",1-r.bt,0.60,0.52)
  +row("Over 2.5 goals",r.o25,0.60,0.52)+row("Under 2.5 goals",1-r.o25,0.60,0.52)+"</table>"
- +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+RES
+ +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+pv
  +'<p><button id="sv">Save this prediction</button> <span id="svm" class="mid"></span></p>'
- +'<p class="note">A 70% chance means about 7 wins in 10 similar games, not a guaranteed result. No model can honestly promise 90% across all matches. “Too close” means skip the game. Rest-day flags only look at games in the same competition.</p></section>';
+ +'<p class="note">A 70% chance means about 7 wins in 10 similar games, not a guaranteed result. No model can honestly promise 90% across all matches. “Too close” means skip the game.</p></section>';
  document.getElementById("sv").onclick=saveLast;
  o.scrollIntoView({behavior:"smooth",block:"nearest"})
 }
-// System summary: the model's calls for every game on the chosen date
-function summary(){
- var by={},order=[],T={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,f:0,hit:0};
- GM.forEach(function(g){if(!g.p)return;var k=g.cn;if(!by[k]){by[k]={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,f:0,hit:0,best:[]};order.push(k)}
-  var c=by[k],p=g.p;c.n++;c[p.key]++;if(p.top>=0.55)c.s++;if(p.bt>=0.52)c.gg++;if(p.o25>=0.52)c.ov++;if(g.ev){c.f++;if(g.ev.res)c.hit++}
-  c.best.push([p.top,g.h.n+" v "+g.a.n+": "+p.side+" "+pc(p.top)+"%"])});
- var html="<table><tr><th>League</th><th>Games</th><th>Home</th><th>Draw</th><th>Away</th><th>Strong leans</th><th>GG lean</th><th>Over 2.5 lean</th><th>Result record</th></tr>",calls="";
- order.forEach(function(k){var c=by[k];Object.keys(T).forEach(function(q){T[q]+=c[q]});
-  html+="<tr><td>"+esc(k)+'</td><td class="n">'+c.n+'</td><td class="n">'+c.H+'</td><td class="n">'+c.D+'</td><td class="n">'+c.A+'</td><td class="n">'+c.s+'</td><td class="n">'+c.gg+'</td><td class="n">'+c.ov+'</td><td class="n">'+(c.f?c.hit+"/"+c.f:"–")+"</td></tr>";
-  c.best.sort(function(x,y){return y[0]-x[0]});calls+="<p><b>"+esc(k)+"</b>: "+c.best.slice(0,3).map(function(x){return esc(x[1])}).join("; ")+".</p>"});
- if(order.length>1)html+='<tr><td><b>All leagues</b></td><td class="n">'+T.n+'</td><td class="n">'+T.H+'</td><td class="n">'+T.D+'</td><td class="n">'+T.A+'</td><td class="n">'+T.s+'</td><td class="n">'+T.gg+'</td><td class="n">'+T.ov+'</td><td class="n">'+(T.f?T.hit+"/"+T.f:"–")+"</td></tr>";
- html+="</table>";
- document.getElementById("sum").innerHTML=T.n?html+'<h2 style="margin-top:16px">Strongest calls</h2>'+calls+'<p class="note">Counts are the model’s lean in each game on this date. A “strong lean” means 55% or more for the top result. Result record counts finished games where the lean was right.</p>':'<p class="note">No predictions for this date yet.</p>'
-}
 
+// System summary: runs the same model on every game in scope and checks finished ones against the real score
+function summary(){
+ var day=document.getElementById("sc").value=="day",d=document.getElementById("dt").value,T={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,fin:0,hit:0},calls="";
+ var html="<table><tr><th>League</th><th>Games</th><th>Home</th><th>Draw</th><th>Away</th><th>Strong leans</th><th>GG lean</th><th>Over 2.5 lean</th><th>Finished: called right</th></tr>";
+ function cells(c){return'<td class="n">'+c.n+'</td><td class="n">'+c.H+'</td><td class="n">'+c.D+'</td><td class="n">'+c.A+'</td><td class="n">'+c.s+'</td><td class="n">'+c.gg+'</td><td class="n">'+c.ov+'</td><td class="n">'+(c.fin?c.hit+"/"+c.fin:"-")+"</td>"}
+ Object.keys(D).forEach(function(k){
+  var c={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,fin:0,hit:0},best=[];
+  FX[k].filter(function(g){return!day||ld(g.t)==d}).forEach(function(g){
+   var md=mfor(k,g.h,g.a,g.t),r=md.r,mt=META[g.x[3]];
+   c.n++;c[r.key]++;if(r.top>=0.55)c.s++;if(r.bt>=0.52)c.gg++;if(r.o25>=0.52)c.ov++;
+   if(mt&&mt.s=="FINISHED"&&mt.hs!=null){c.fin++;if(evalGame(r,mt.hs,mt.as).res)c.hit++}
+   best.push([r.top,md.h.name+" v "+md.a.name+": "+r.side+" "+pc(r.top)+"%"])});
+  if(!c.n)return;
+  Object.keys(T).forEach(function(q){T[q]+=c[q]});
+  html+="<tr><td>"+esc(D[k].n)+"</td>"+cells(c)+"</tr>";
+  best.sort(function(x,y){return y[0]-x[0]});calls+="<p><b>"+esc(D[k].n)+"</b>: "+best.slice(0,3).map(function(x){return esc(x[1])}).join("; ")+".</p>"});
+ html+="<tr><td><b>All leagues</b></td>"+cells(T)+"</tr></table>";
+ html+=T.n?'<h2 style="margin-top:16px">Strongest calls</h2>'+calls+'<p class="note">Counts are the model’s lean in each game. A “strong lean” means 55% or more for the top result. For finished games the model is scored on the real result, using only data from before kick-off.</p>':'<p class="note">No games in scope. Pick another date or switch to all loaded games.</p>';
+ document.getElementById("sum").innerHTML=html
+}
 // Accounts, payment approval and saved predictions are handled by the server (Cloudflare Worker + D1).
 var ME=null,saves=[],mode="login",flash="";
 var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again."};
@@ -326,11 +334,8 @@ function renderAcct(offline){
  var ck=document.getElementById("ck");if(ck)ck.onclick=function(){var f=document.getElementById("af");if(f.reportValidity())go()}
 }
 async function enter(){
- renderAcct();document.getElementById("app").hidden=false;
- var dt=document.getElementById("dt");if(!dt.value)dt.value=ld(new Date());
- loadGames();loadRecord();
- if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden&&needsRefresh())loadGames(true)},60000);
- await loadSaves();devPanel()
+ var r=await api("data");if(r.ok&&r.j&&typeof r.j=="object"){D=r.j;build()}
+ renderAcct();document.getElementById("app").hidden=false;SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel()
 }
 async function loadSaves(){var r=await api("saves");saves=r.ok&&r.j.items?r.j.items:[];renderMine()}
 async function saveLast(){
@@ -361,11 +366,19 @@ async function devPanel(){
  var h="<p><b>"+pend.length+"</b> waiting for approval · <b>"+us.length+"</b> accounts</p>";
  h+="<h2>Pending payments</h2>"+(pend.length?"<table><tr><th>Person</th><th>M-Pesa code</th><th>Registered</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td class='n'>"+esc(u.mpesa)+"</td><td>"+esc(dt(u.created))+"</td><td><button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> <button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Reject</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nobody is waiting.</p>");
  h+="<h2 style='margin-top:16px'>All other accounts</h2>"+(rest.length?"<table><tr><th>Person</th><th>Status</th><th>Saved</th><th>Decide</th><th>Message</th></tr>"+rest.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+" · "+esc(u.mpesa)+"</span></td><td>"+esc(u.status)+"</td><td class='n'>"+u.n+"</td><td>"+(u.status=="approved"?"<button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Revoke</button> ":"<button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> ")+"<button class='alt sm' data-d='"+u.id+"'>Remove</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No other accounts yet.</p>");
- h+="<p class='note'>Match data now loads by itself from football-data.org. Check the feed on the match day card above.</p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
+ h+="<h2 style='margin-top:16px'>Data feed</h2><p><button class='alt' id='ft'>Test data feed</button></p><div id='fm' class='note'>Press the button to see exactly what football-data.org answers to your key.</div>";
+ h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste the full data JSON (same format as src/data.json)'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
  body.innerHTML=h;
  body.querySelectorAll("button[data-a]").forEach(function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.u,status:x.dataset.a});devPanel()}});
  body.querySelectorAll("button[data-d]").forEach(function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions?")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
  body.querySelectorAll("button[data-w]").forEach(function(x){x.onclick=function(){var u=us.filter(function(q){return q.id==x.dataset.w})[0],k=body.querySelector("select[data-s='"+x.dataset.w+"']").value;if(u&&u.phone)window.open(waLink(tplMsg(k,u),u.phone),"_blank","noopener")}});
+ document.getElementById("ft").onclick=async function(){var m=document.getElementById("fm");m.textContent="Testing…";var q=await api("admin/feedtest");var j=q.j||{};
+  if(!q.ok){m.textContent="The test could not run. Log in again and retry.";return}
+  if(!j.has_key){m.textContent="The server has no FOOTBALL_DATA_KEY. Add it as a Secret on this Worker (Settings > Variables and Secrets, not Build) and redeploy.";return}
+  var hint=j.status==200?"The feed is working.":j.status==0?"The server could not reach football-data.org.":(j.status==400||j.status==401||j.status==403)?"The key was rejected or is not allowed. Re-copy the token from your football-data.org email, with no spaces, save it again and redeploy.":j.status==429?"Rate limited. Wait a minute and try again.":j.status>=500?"football-data.org is having trouble. Try later.":"Unexpected answer.";
+  m.textContent="Key found ("+j.key_length+" characters; tokens are usually 32). football-data.org answered HTTP "+j.status+(j.message?": "+j.message:"")+". "+hint};
+ document.getElementById("ds").onclick=async function(){var m=document.getElementById("dm");try{var o=JSON.parse(document.getElementById("dd").value)}catch(e){m.textContent="That is not valid JSON.";return}
+  var q=await api("admin/data",{data:o});m.textContent=q.ok?"Data updated. Reload to see it.":"Could not save: "+(q.j.error||"error")}
 }
 async function init(){
  var r=await api("me");
@@ -373,44 +386,110 @@ async function init(){
  if(r.status==401){renderAcct();return}
  renderAcct(true)
 }
-// ---- Loading games and the track record
-function shiftDay(n){var d=new Date(document.getElementById("dt").value+"T12:00:00");d.setDate(d.getDate()+n);document.getElementById("dt").value=ld(d);RETRY=0;CUR=null;loadGames()}
-async function loadGames(silent){
- var el=document.getElementById("dt"),d=el.value;if(!d)return;var my=++LOADING;
- if(!silent){GERR="";document.getElementById("list").innerHTML='<p class="note">Loading games…</p>'}
- var r=await api("games?date="+d+"&tz="+(-new Date(d+"T12:00:00").getTimezoneOffset()));
- if(my!==LOADING)return;
- if(r.status===401){location.reload();return}
- if(r.ok&&r.j&&r.j.games&&!r.j.error){GM=r.j.games;PEND=r.j.pending||[];STALE=!!r.j.stale;GERR=""}
- else{if(!silent||!GM.length){GM=[];PEND=[]}GERR=(r.j&&r.j.error)||"error"}
- list();
- var fin=GM.filter(isDone).length;if(fin!==FINN){if(FINN>=0)loadRecord();FINN=fin}
- if(CUR){var g=GM.filter(function(x){return x.id==CUR.id})[0];if(g&&(g.s!=CUR.s||g.hs!=CUR.hs||g.as!=CUR.as)){document.querySelectorAll("#list .fx").forEach(function(x){});pick(g)}else if(g)CUR=g}
- clearTimeout(RT);if(PEND.length&&RETRY<6){RETRY++;RT=setTimeout(function(){loadGames(true)},20000)}else if(!PEND.length)RETRY=0
+// Live and concluded games: server feed (football-data.org) plus the model's own scoring of finished games
+var CODE={PL:"EPL",PD:"LL",SA:"SA"},LIVE=null,LERR="";
+function nz(n){return String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g,"and").replace(/manchester/g,"man").replace(/nottingham/g,"nottm").replace(/\b(fc|afc|cf|ac|as|ssc|ud|rcd|cd|de|club|calcio|1909)\b/g,"").replace(/[^a-z0-9]+/g," ").trim()}
+function findTeam(k,names){var T=D[k].t,ns=names.map(nz).filter(Boolean),part=[];
+ for(var ab in T){var d=nz(T[ab][0]);for(var i=0;i<ns.length;i++){if(ns[i]==d)return ab;if(ns[i].indexOf(d+" ")==0||d.indexOf(ns[i]+" ")==0)part.push(ab)}}
+ var u=part.filter(function(x,i){return part.indexOf(x)==i});return u.length==1?u[0]:null}
+function mfor(k,ha,aa,ko){var h=info(k,ha,ko),a=info(k,aa,ko),l=lgAvg(k,ko);return{h:h,a:a,r:calc({hf:h.gf,hg:h.n,ha:h.ga,hp:h.form,hi:0,af:a.gf,ag:a.n,aa:a.ga,ap:a.form,ai:0,LH:l[0],LA:l[1],FH:h.fat,FA:a.fat},h.name,a.name)}}
+function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,bt=0,o=0,i,j;
+ for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p;if(H>0&&A>0)bt+=p;if(H+A>2)o+=p}
+ var t=h+d+a;return{H:h/t,D:d/t,A:a/t,bt:bt/t,o:o/t}}
+function frac(m){var e;if(m.m!=null)e=m.m;else if(m.s=="PAUSED")e=45;else{e=(Date.now()-new Date(m.t))/6e4;if(e>62)e-=15}return Math.max(0,Math.min(e,90))/90}
+function evalGame(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",c=r.dc[0];return{act:act,res:r.key==act,dc:c.indexOf("1X")==0?act!="A":c.indexOf("X2")==0?act!="H":act!="D",bt:(r.bt>=0.5)==(hs>0&&as>0),ov:(r.o25>=0.5)==(hs+as>2)}}
+function mark(ok){return ok?'<span class="hit">✓<span class="sr"> hit</span></span>':'<span class="miss">✗<span class="sr"> miss</span></span>'}
+function teamsOf(m){var k=D[m.c]?m.c:CODE[m.c];if(!(k&&D[k]))return null;
+ if(D[k].dyn){var x=String(m.hid),y=String(m.aid);return D[k].t[x]&&D[k].t[y]?{k:k,a:x,b:y}:null}
+ var a=findTeam(k,[m.h,m.hn]),b=findTeam(k,[m.a,m.an]);return a&&b?{k:k,a:a,b:b}:null}
+function liveRow(m){
+ var tm=teamsOf(m),gh=m.hs==null?0:m.hs,ga=m.as==null?0:m.as,f=frac(m),lab=m.m!=null?m.m+"’":m.s=="PAUSED"?"HT":"about "+Math.round(f*90)+"’";
+ var h='<div class="lvrow"><b>'+esc(m.cn||"")+'</b> <span class="live">LIVE</span> '+lab+'<br><span class="xg">'+esc(m.h)+" "+gh+" – "+ga+" "+esc(m.a)+"</span>";
+ if(tm){var md=mfor(tm.k,tm.a,tm.b,new Date(m.t)),r=md.r,lp=liveProb(r.lh,r.la,f,gh,ga),dl=Math.round((lp[r.key]-(r.key=="H"?r.h:r.key=="D"?r.d:r.a))*100);
+  h+="<table><tr><th></th><th>"+esc(m.h)+"</th><th>Draw</th><th>"+esc(m.a)+"</th></tr><tr><td>Before kick-off</td><td class='n'>"+pc(r.h)+"%</td><td class='n'>"+pc(r.d)+"%</td><td class='n'>"+pc(r.a)+"%</td></tr><tr><td>Live now</td><td class='n'>"+pc(lp.H)+"%</td><td class='n'>"+pc(lp.D)+"%</td><td class='n'>"+pc(lp.A)+"%</td></tr></table>"
+  +"<p style='margin:6px 0 0;font-size:14px'>Pre-match lean was <b>"+esc(r.side)+"</b> ("+pc(r.top)+"%). Its chance is now "+pc(lp[r.key])+"% ("+(dl>=0?"+":"")+dl+" points). Both teams to score: "+pc(lp.bt)+"%. Over 2.5 goals: "+pc(lp.o)+"%.</p>"}
+ else h+='<p class="mid" style="margin:6px 0 0;font-size:14px">No model for this league in the data, so only the score is shown.</p>';
+ return h+"</div>"}
+function finRow(g,T){
+ var h='<div class="lvrow"><b>'+esc(g.cn||"")+'</b> <span class="mid">'+esc(g.when||"")+'</span><br><span class="xg">'+esc(g.h)+" "+g.hs+" – "+g.as+" "+esc(g.a)+"</span>";
+ if(g.k&&g.ha){var md=mfor(g.k,g.ha,g.ba,g.ko),r=md.r,e=evalGame(r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++;
+  h+="<p style='margin:6px 0 0;font-size:14px'>Model before the game: <b>"+esc(r.side)+"</b> "+pc(r.top)+"% "+mark(e.res)+" · Double chance "+esc(r.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+((r.bt>=0.5)?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+((r.o25>=0.5)?"Yes":"No")+" "+mark(e.ov)+"</p>"}
+ return h+"</div>"}
+async function loadLive(){var r=await api("live");if(r.ok&&r.j&&r.j.matches){LIVE=r.j;LERR="";if(DYN){var cs=[],add=false;r.j.matches.forEach(function(m){if(m.c&&cs.indexOf(m.c)<0&&(m.s=="IN_PLAY"||m.s=="PAUSED"||m.s=="FINISHED"))cs.push(m.c)});for(var i=0;i<cs.length;i++){if(!D[cs[i]]&&await ensureSeason(cs[i]))add=true}if(add)build()}}else{LIVE=null;LERR=(r.j&&r.j.error)||"error"}renderLive()}
+function renderLive(){
+ var b=document.getElementById("liveBody"),h="",T={n:0,res:0,dc:0,bt:0,ov:0},now=Date.now();
+ if(LIVE){h+='<p class="mid" style="margin:0">Updated '+ht(new Date(LIVE.at))+(LIVE.stale?" (source busy, showing older data)":"")+'. Refreshes every minute while this page is open. On the free data plan, scores can be delayed.</p>';
+  var lv=LIVE.matches.filter(function(m){return m.s=="IN_PLAY"||m.s=="PAUSED"}).sort(function(a,c){return new Date(a.t)-new Date(c.t)});
+  h+="<h2 style='margin-top:14px'>Live now</h2>"+(lv.length?lv.map(liveRow).join(""):"<p class='mid'>No games in play right now.</p>");
+  var fin=LIVE.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&now-new Date(m.t)<1.5*864e5}).sort(function(a,c){return new Date(c.t)-new Date(a.t)});
+  h+="<h2 style='margin-top:14px'>Concluded games</h2>"+(fin.length?fin.map(function(m){var tm=teamsOf(m);return finRow({cn:m.cn,h:m.h,a:m.a,hs:m.hs,as:m.as,k:tm&&tm.k,ha:tm&&tm.a,ba:tm&&tm.b,ko:new Date(m.t),when:new Date(m.t).toLocaleString()},T)}).join(""):"<p class='mid'>No finished games in the last 36 hours.</p>")}
+ else{h+='<p class="note" style="margin-top:0">'+(LERR=="no_key"?"The live feed is not connected yet. Add FOOTBALL_DATA_KEY in Cloudflare (see README.txt). Meanwhile this shows how the model scored the finished games saved in the data.":LERR=="rate"?"The data source is busy. Try again in a minute. Showing saved results.":"Live data is not available right now. Showing saved results.")+"</p>";
+  var all=[];Object.keys(D).forEach(function(k){R[k].forEach(function(g){all.push({cn:D[k].n,h:D[k].t[g.h][0],a:D[k].t[g.a][0],hs:g.x[0],as:g.x[1],k:k,ha:g.h,ba:g.a,ko:g.t,when:g.t.toLocaleString()})})});
+  all.sort(function(a,c){return c.ko-a.ko});
+  var shown=all.slice(0,6).map(function(g){return finRow(g,{n:0,res:0,dc:0,bt:0,ov:0})}).join("");
+  all.forEach(function(g){var e=evalGame(mfor(g.k,g.ha,g.ba,g.ko).r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++});
+  h+="<h2>Latest saved results</h2>"+shown}
+ if(T.n){function q(x){return x+"/"+T.n+" ("+Math.round(100*x/T.n)+"%)"}
+  h+="<div class='note'><b>Model record on these concluded games:</b> result "+q(T.res)+" · double chance "+q(T.dc)+" · both teams to score "+q(T.bt)+" · over/under 2.5 "+q(T.ov)+". Each game is scored using only the data that existed before kick-off. A small sample like this says little, so judge the model over hundreds of games, not a handful.</div>"}
+ h+='<p><button class="alt" id="lvr">Refresh now</button></p>';
+ b.innerHTML=h;document.getElementById("lvr").onclick=loadLive
 }
-function needsRefresh(){var d=document.getElementById("dt").value;return d==ld(new Date())||GM.some(isLive)}
-async function loadRecord(){
- var b=document.getElementById("recBody"),days=document.getElementById("rp").value,r=await api("record?days="+days);
- if(!r.ok||!r.j.rows){b.innerHTML='<p class="note" style="margin-top:0">Could not load the track record.</p>';return}
- var rows=r.j.rows;
- function sum(rs){var s={n:0,res:0,dc:0,bt:0,ov:0,sn:0,sr:0};rs.forEach(function(x){Object.keys(s).forEach(function(k){s[k]+=+x[k]||0})});return s}
- function q(x,n){return n?x+"/"+n+" ("+Math.round(100*x/n)+"%)":"–"}
- function cells(s){return'<td class="n">'+s.n+'</td><td class="n">'+q(s.res,s.n)+'</td><td class="n">'+q(s.dc,s.n)+'</td><td class="n">'+q(s.bt,s.n)+'</td><td class="n">'+q(s.ov,s.n)+'</td><td class="n">'+q(s.sr,s.sn)+"</td>"}
- function tbl(src,title,sub){var rs=rows.filter(function(x){return x.src==src});if(!rs.length)return"";var names={},cs=[];
-  rs.forEach(function(x){if(!names[x.comp]){names[x.comp]=x.cn||x.comp;cs.push(x.comp)}});
-  return"<h2 style='margin-top:14px'>"+title+'</h2><p class="mid" style="margin:0 0 4px;font-size:14px">'+sub+"</p><div class='scroll'><table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th><th>Strong leans (55%+)</th></tr><tr><td><b>All</b></td>"+cells(sum(rs))+"</tr>"
-  +(cs.length>1?cs.map(function(c){return"<tr><td>"+esc(names[c])+"</td>"+cells(sum(rs.filter(function(x){return x.comp==c})))+"</tr>"}).join(""):"")+"</table></div>"}
- var h=tbl("live","Called before kick-off","Saved ahead of the game, so the call could not have been shaped by the result.")+tbl("back","Re-run on past games","Opened after the game; uses only results from before kick-off, but was not saved in advance.");
- b.innerHTML=h?h+'<p class="note">A random pick of the three results would be right about one time in three. These records get meaningful over hundreds of games, not a handful. Open any past date above to see each game as a hit or a miss.</p>':'<p class="note" style="margin-top:0">No finished games are recorded for this period yet. Predictions are saved before kick-off and scored when the game finishes. Open a past date above to score the model on older games.</p>'
+// Daily games from the data feed (server: football-data.org). Falls back to the saved snapshot.
+function addDays(d,n){var x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return ld(x)}
+function useDyn(){if(!DYN){SNAP=D;D={};DYN=true}}
+async function ensureSeason(c){
+ if(D[c]&&D[c].dyn)return true;
+ var r=await api("season?code="+encodeURIComponent(c));
+ if(!r.ok||!r.j||!r.j.res)return false;
+ var t={};Object.keys(r.j.teams||{}).forEach(function(id){t[id]=[r.j.teams[id],0,0,0]});
+ D[c]={n:r.j.name||c,dyn:true,t:t,r:r.j.res.map(function(x){return x[0].slice(0,16)+" "+x[1]+" "+x[2]+" "+x[3]+" "+x[4]}),f:[]};return true
 }
-
+async function loadDay(){
+ var box=document.getElementById("list");box.innerHTML='<p class="note">Loading games…</p>';
+ var d=document.getElementById("dt").value,r=await api("matches?from="+addDays(d,-1)+"&to="+addDays(d,1));
+ if(!r.ok||!r.j||!r.j.matches){var e=r.j&&r.j.error;
+  MSG=e=="no_key"?"The live data feed is not connected yet (FOOTBALL_DATA_KEY, see README). Showing the saved snapshot.":e=="rate"?"The data source is busy. Try again in a minute."+(DYN?"":" Showing the saved snapshot."):"Could not load games right now (the data source returned an error"+(r.j&&r.j.status!=null?", HTTP "+r.j.status:"")+"). "+(ME&&ME.role=="admin"?"Use Test data feed in the Developer panel to see why.":"Try again shortly.")+(DYN?"":" Showing the saved snapshot.");
+  list();return}
+ var ms=r.j.matches.filter(function(m){return m.h&&m.a&&m.c}),codes=[],failed=[];
+ useDyn();
+ ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
+ for(var i=0;i<codes.length;i++){if(!D[codes[i]]&&!(await ensureSeason(codes[i])))failed.push(codes[i])}
+ META={};Object.keys(D).forEach(function(k){D[k].f=[]});
+ ms.forEach(function(m){var k=m.c;if(!D[k])return;if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];META[m.id]={s:m.s,hs:m.hs,as:m.as,m:m.m,cn:m.cn};D[k].f.push(m.t.slice(0,16)+" "+m.h+" "+m.a+" 0 0 0 "+m.id)});
+ if(!Object.keys(D).length&&SNAP){D=SNAP;DYN=false;SNAP=null;MSG="The data source is busy. Showing the saved snapshot."}
+ else MSG=failed.length?"Some leagues are still loading because the data source limits requests. Retrying automatically in a minute.":"";
+ build();clearTimeout(RETRY);if(failed.length)RETRY=setTimeout(loadDay,65000);
+ list()
+}
+async function runHistory(){
+ var b=document.getElementById("histBody"),n=+document.getElementById("hd").value;b.textContent="Loading…";
+ var r=await api("matches?from="+ld(new Date(Date.now()-n*864e5))+"&to="+ld(new Date()));
+ if(!r.ok||!r.j||!r.j.matches){var e=r.j&&r.j.error;b.textContent=e=="no_key"?"Connect the data feed first (FOOTBALL_DATA_KEY, see README).":"Could not load past games right now. Try again in a minute.";return}
+ var ms=r.j.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&m.as!=null&&m.h&&m.a&&m.c}),codes=[],skipped=0;
+ useDyn();
+ ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
+ for(var i=0;i<codes.length;i++){if(!D[codes[i]])await ensureSeason(codes[i])}
+ build();
+ var rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0};
+ ms.sort(function(x,y){return new Date(y.t)-new Date(x.t)}).forEach(function(m){
+  var k=m.c;if(!D[k]){skipped++;return}
+  if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];
+  var md=mfor(k,String(m.h),String(m.a),new Date(m.t)),e=evalGame(md.r,m.hs,m.as),q=L[k]||(L[k]={n:D[k].n,t:{n:0,res:0,dc:0,bt:0,ov:0}});
+  [q.t,A].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
+  rows.push("<tr><td>"+esc(new Date(m.t).toLocaleDateString())+"</td><td>"+esc(m.hn)+" "+m.hs+"–"+m.as+" "+esc(m.an)+"<br><span class='mid'>"+esc(D[k].n)+"</span></td><td>"+esc(md.r.side)+" "+pc(md.r.top)+"%</td><td>"+mark(e.res)+"</td><td>"+mark(e.dc)+"</td><td>"+mark(e.bt)+"</td><td>"+mark(e.ov)+"</td></tr>")});
+ function pct(x,n){return n?Math.round(100*x/n)+"% ("+x+"/"+n+")":"-"}
+ function line(nm,o){return"<tr><td>"+esc(nm)+"</td><td class='n'>"+o.n+"</td><td class='n'>"+pct(o.res,o.n)+"</td><td class='n'>"+pct(o.dc,o.n)+"</td><td class='n'>"+pct(o.bt,o.n)+"</td><td class='n'>"+pct(o.ov,o.n)+"</td></tr>"}
+ if(!A.n){b.textContent="No finished games with data in this period.";return}
+ b.innerHTML="<table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+Object.keys(L).map(function(k){return line(L[k].n,L[k].t)}).join("")+line("All leagues",A)+"</table>"
+ +'<h2 style="margin-top:16px">Game by game</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>'+rows.slice(0,100).join("")+"</table>"
+ +'<p class="note">Each game is predicted using only results from before kick-off, so this is an honest record, not hindsight. ✓ = the model called it, ✗ = it did not.'+(skipped?" "+skipped+" games skipped (league data not loaded).":"")+" Judge the model over hundreds of games, not a few days.</p>";
+ list()
+}
 document.getElementById("go").onclick=run;
-document.getElementById("man").onclick=function(){ctx="";RES="";CUR=null;FH=1;FA=1;document.getElementById("form").open=true;document.getElementById("hn").focus()};
-document.getElementById("dt").onchange=function(){RETRY=0;CUR=null;loadGames()};
-document.getElementById("prev").onclick=function(){shiftDay(-1)};
-document.getElementById("next").onclick=function(){shiftDay(1)};
-document.getElementById("today").onclick=function(){document.getElementById("dt").value=ld(new Date());RETRY=0;CUR=null;loadGames()};
-document.getElementById("rp").onchange=loadRecord;
+document.getElementById("hb").onclick=runHistory;
+document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
+document.getElementById("dt").onchange=loadDay;
+document.getElementById("sc").onchange=summary;
 init();
 if("serviceWorker" in navigator&&location.protocol.indexOf("http")==0){navigator.serviceWorker.register("sw.js").catch(function(){})}
 </script>
