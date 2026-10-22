@@ -106,6 +106,14 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <p class="note">Games load automatically for the date you pick, from the leagues your data feed covers. If the feed is not connected, a saved snapshot is shown instead. Any other league works through the manual match below.</p>
 </section>
 
+<section class="card" id="picks">
+ <h2>Confidence picks</h2>
+ <p class="mid" style="margin:0 0 6px">Double chance, favourite to win and both teams to score for the chosen day. Only the games the model is most sure about.</p>
+ <label for="pk">Strictness</label>
+ <select id="pk"><option value="bal">Balanced</option><option value="strict">Strict</option><option value="vs">Very strict</option></select>
+ <div id="picksBody"></div>
+</section>
+
 <section class="card" id="live">
  <h2>Live and concluded games</h2>
  <div id="liveBody" aria-live="polite">Loading…</div>
@@ -173,7 +181,7 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 <script>
 var D={};
 function G(k,s){var p=s.split(" ");return{k:k,t:new Date(p[0]+":00Z"),h:p[1],a:p[2],x:p.slice(3).map(Number)}}
-var R={},FX={},ALL=[],ctx="",PROV=null,FH=1,FA=1,LK=null,last=null;
+var R={},FX={},ALL=[],ctx="",PROV=null,FH=1,FA=1,LK=null,last=null,EH=null,EA=null,CTXD=null,LASTR=null,REL={dc:[],w:[],b:[]};
 function build(){R={};FX={};ALL=[];Object.keys(D).forEach(function(k){R[k]=D[k].r.map(function(s){return G(k,s)});FX[k]=D[k].f.map(function(s){return G(k,s)});FX[k].forEach(function(g){ALL.push(g)})})}build();
 function z(n){return(n<10?"0":"")+n}
 function ld(d){return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())}
@@ -192,13 +200,13 @@ function lgAvg(k,ko){var h=0,a=0,n=0;R[k].forEach(function(g){if(!ko||g.t<ko){h+
 function info(k,ab,ko){
  var tb=D[k].t[ab],dyn=D[k].dyn,res=R[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t<ko}).sort(function(a,b){return a.t-b.t}),gf=0,ga=0,pts=0,p5=0,lines=[];
  res.forEach(function(g,i){var home=g.h==ab,f=home?g.x[0]:g.x[1],a=home?g.x[1]:g.x[0],o=(D[k].t[home?g.a:g.h]||["?"])[0],pp=f>a?3:f==a?1:0;gf+=f;ga+=a;pts+=pp;if(i>=res.length-5)p5+=pp;lines.push((f>a?"W":f==a?"D":"L")+" "+f+"-"+a+(home?" v ":" at ")+o)});
- var ppg=dyn?(res.length?pts/res.length:1.4):tb[2]/tb[3],wp=res.length?(dyn?p5/Math.min(5,res.length):pts/res.length):ppg,form=5*(0.5*ppg+0.5*wp);
+ var ppg=dyn?(res.length?pts/res.length:1.4):(tb[3]?tb[2]/tb[3]:1.4),wp=res.length?(dyn?p5/Math.min(5,res.length):pts/res.length):ppg,form=5*(0.5*ppg+0.5*wp);
  var prev=res.length?(ko-res[res.length-1].t)/864e5:null;
  var nx=FX[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t>ko}).sort(function(a,b){return a.t-b.t})[0];
  var nd=nx?(nx.t-ko)/864e5:null,fat=1,flags=[];
  if(prev!==null&&prev<3.5){fat*=0.97;flags.push("only "+Math.round(prev)+" days of rest")}
  if(nd!==null&&nd<3.5){fat*=0.98;flags.push("plays again in "+Math.round(nd)+" days, so rotation is possible")}
- return{name:tb[0],rank:dyn?0:tb[1],pts:dyn?pts:tb[2],gp:dyn?res.length:tb[3],n:res.length,gf:gf,ga:ga,form:form,lines:lines.slice(-4),fat:fat,flags:flags,next:nx?((D[k].t[nx.h==ab?nx.a:nx.h]||["?"])[0]+(nx.h==ab?" (home) ":" (away) ")+ld(nx.t)):"none in the data"}
+ return{name:tb[0],elo:tb[4]||null,rank:dyn?0:tb[1],pts:dyn?pts:tb[2],gp:dyn?res.length:tb[3],n:res.length,gf:gf,ga:ga,form:form,lines:lines.slice(-4),fat:fat,flags:flags,next:nx?((D[k].t[nx.h==ab?nx.a:nx.h]||["?"])[0]+(nx.h==ab?" (home) ":" (away) ")+ld(nx.t)):"none in the data"}
 }
 function rankAt(k,ab,ko){var Pt={},Gd={};R[k].forEach(function(g){if(g.t>=ko)return;var x=g.x[0],y=g.x[1];Pt[g.h]=(Pt[g.h]||0)+(x>y?3:x==y?1:0);Pt[g.a]=(Pt[g.a]||0)+(y>x?3:x==y?1:0);Gd[g.h]=(Gd[g.h]||0)+x-y;Gd[g.a]=(Gd[g.a]||0)+y-x});var arr=Object.keys(Pt).sort(function(a,b){return Pt[b]-Pt[a]||Gd[b]-Gd[a]}),i=arr.indexOf(String(ab));return i<0?0:i+1}
 // Core model: shrunk goal rates, form, fatigue, injuries, then a Dixon-Coles style Poisson grid
@@ -206,6 +214,7 @@ function calc(p,hn,an){
  var K=5,AV=(p.LH+p.LA)/2;
  function s(f,n){return((f+K*AV)/(n+K))/AV}
  var lh=p.LH*s(p.hf,p.hg)*s(p.aa,p.ag),la=p.LA*s(p.af,p.ag)*s(p.ha,p.hg);
+ if(p.eh&&p.ea){var dd=p.eh-p.ea;lh*=Math.pow(10,dd/1250);la*=Math.pow(10,-dd/1250)}
  lh*=(1+(p.hp-7)*0.012)*p.FH*(1-p.hi/100);la*=(1+(p.ap-7)*0.012)*p.FA*(1-p.ai/100);
  var M=[],t=0,i,j,h=0,d=0,a=0,bt=0,o25=0,sc=[];
  for(i=0;i<9;i++){M[i]=[];for(j=0;j<9;j++){M[i][j]=P(i,lh)*P(j,la)*tau(i,j,lh,la,-0.1);t+=M[i][j]}}
@@ -215,7 +224,7 @@ function calc(p,hn,an){
  var top=Math.max(h,d,a);
  return{h:h,d:d,a:a,bt:bt,o25:o25,lh:lh,la:la,sc:sc,dc:dc,top:top,side:top==h?hn+" win":top==a?an+" win":"Draw",key:top==h?"H":top==a?"A":"D"}
 }
-function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),af:v("af"),ag:v("ag"),aa:v("aa"),ap:v("ap"),ai:v("ai"),LH:v("lh"),LA:v("la"),FH:FH,FA:FA}}
+function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),af:v("af"),ag:v("ag"),aa:v("aa"),ap:v("ap"),ai:v("ai"),LH:v("lh"),LA:v("la"),FH:FH,FA:FA,eh:EH,ea:EA}}
 
 var DYN=false,SNAP=null,META={},MSG="",RETRY=null;
 function list(){
@@ -231,7 +240,7 @@ function list(){
   b.className="fx";b.setAttribute("aria-pressed","false");
   b.innerHTML="<b>"+ht(g.t)+"</b><span>"+esc(D[g.k].t[g.h][0])+" v "+esc(D[g.k].t[g.a][0])+"</span><small>"+st+"</small>";
   b.onclick=function(){box.querySelectorAll(".fx").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");pick(g)};box.appendChild(b)});
- summary()
+ summary();renderPicks()
 }
 function pick(g){
  var h=info(g.k,g.h,g.t),a=info(g.k,g.a,g.t),l=lgAvg(g.k,g.t);LK=g.k;
@@ -239,7 +248,7 @@ function pick(g){
  sv("hn",h.name);sv("hg",h.n);sv("hf",h.gf);sv("ha",h.ga);sv("hp",h.form.toFixed(1));
  sv("an",a.name);sv("ag",a.n);sv("af",a.gf);sv("aa",a.ga);sv("ap",a.form.toFixed(1));
  sv("lh",l[0].toFixed(2));sv("la",l[1].toFixed(2));
- FH=h.fat;FA=a.fat;PROV=g.x;
+ FH=h.fat;FA=a.fat;PROV=g.x;CTXD={h:h,a:a};EH=h.elo;EA=a.elo;
  function box(t,i){return"<p><b>"+esc(t)+"</b>: "+(i.rank?i.rank+ordn(i.rank)+" on ":"")+i.pts+" pts from "+i.gp+" games. Last results: "+(esc(i.lines.join("; "))||"none in the data")+". Next: "+esc(i.next)+"."+(i.flags.length?' <span class="bad">Flag: '+i.flags.join("; ")+".</span>":"")+"</p>"}
  var mt=META[g.x[3]],res="";
  if(mt&&mt.s=="FINISHED"&&mt.hs!=null){var r0=mfor(g.k,g.h,g.a,g.t).r,e=evalGame(r0,mt.hs,mt.as);
@@ -249,7 +258,7 @@ function pick(g){
  run()
 }
 function run(){
- var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;
+ var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;LASTR={r:r,hn:hn,an:an};
  function tag(p,hi,lo){return p>=hi?'<span class="tag good">Strong lean</span>':p>=lo?'<span class="tag mid">Slight lean</span>':'<span class="tag bad">Too close</span>'}
  function row(n,p,hi,lo){return"<tr><td>"+n+'</td><td class="n">'+pc(p)+"%</td><td>"+tag(p,hi,lo)+"</td></tr>"}
  var pv=PROV&&(PROV[0]+PROV[1]+PROV[2])>0?'<p class="note">Data provider’s own model: '+esc(hn)+" "+Math.round(PROV[0])+"%, draw "+Math.round(PROV[1])+"%, "+esc(an)+" "+Math.round(PROV[2])+"%. Where it and this model agree, the call is sturdier.</p>":"";
@@ -263,9 +272,9 @@ function run(){
  +row("Both teams to score: Yes",r.bt,0.60,0.52)+row("Both teams to score: No",1-r.bt,0.60,0.52)
  +row("Over 2.5 goals",r.o25,0.60,0.52)+row("Under 2.5 goals",1-r.o25,0.60,0.52)+"</table>"
  +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+pv
- +'<p><button id="sv">Save this prediction</button> <span id="svm" class="mid"></span></p>'
+ +'<p><button id="sv">Save this prediction</button> <button class="alt" id="ai">Ask Claude for a second opinion</button> <span id="svm" class="mid"></span></p><div id="aib"></div>'
  +'<p class="note">A 70% chance means about 7 wins in 10 similar games, not a guaranteed result. No model can honestly promise 90% across all matches. “Too close” means skip the game.</p></section>';
- document.getElementById("sv").onclick=saveLast;
+ document.getElementById("sv").onclick=saveLast;document.getElementById("ai").onclick=askAI;
  o.scrollIntoView({behavior:"smooth",block:"nearest"})
 }
 
@@ -367,7 +376,7 @@ async function devPanel(){
  h+="<h2>Pending payments</h2>"+(pend.length?"<table><tr><th>Person</th><th>M-Pesa code</th><th>Registered</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td class='n'>"+esc(u.mpesa)+"</td><td>"+esc(dt(u.created))+"</td><td><button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> <button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Reject</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nobody is waiting.</p>");
  h+="<h2 style='margin-top:16px'>All other accounts</h2>"+(rest.length?"<table><tr><th>Person</th><th>Status</th><th>Saved</th><th>Decide</th><th>Message</th></tr>"+rest.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+" · "+esc(u.mpesa)+"</span></td><td>"+esc(u.status)+"</td><td class='n'>"+u.n+"</td><td>"+(u.status=="approved"?"<button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Revoke</button> ":"<button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> ")+"<button class='alt sm' data-d='"+u.id+"'>Remove</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No other accounts yet.</p>");
  h+="<h2 style='margin-top:16px'>Data feed</h2><p><button class='alt' id='ft'>Test data feed</button></p><div id='fm' class='note'>Press the button to see exactly what football-data.org answers to your key.</div>";
- h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste the full data JSON (same format as src/data.json)'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
+ h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste JSON for the leagues to add or replace, e.g. Europa League data (see templates/europa-conference-example.json). Use null to delete a league.'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
  body.innerHTML=h;
  body.querySelectorAll("button[data-a]").forEach(function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.u,status:x.dataset.a});devPanel()}});
  body.querySelectorAll("button[data-d]").forEach(function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions?")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
@@ -378,7 +387,7 @@ async function devPanel(){
   var hint=j.status==200?"The feed is working.":j.status==0?"The server could not reach football-data.org.":(j.status==400||j.status==401||j.status==403)?"The key was rejected or is not allowed. Re-copy the token from your football-data.org email, with no spaces, save it again and redeploy.":j.status==429?"Rate limited. Wait a minute and try again.":j.status>=500?"football-data.org is having trouble. Try later.":"Unexpected answer.";
   m.textContent="Key found ("+j.key_length+" characters; tokens are usually 32). football-data.org answered HTTP "+j.status+(j.message?": "+j.message:"")+". "+hint};
  document.getElementById("ds").onclick=async function(){var m=document.getElementById("dm");try{var o=JSON.parse(document.getElementById("dd").value)}catch(e){m.textContent="That is not valid JSON.";return}
-  var q=await api("admin/data",{data:o});m.textContent=q.ok?"Data updated. Reload to see it.":"Could not save: "+(q.j.error||"error")}
+  var q=await api("admin/data",{data:o});m.textContent=q.ok?"Data updated and merged. Reload to see it.":"Could not save: "+(q.j.error||"error")}
 }
 async function init(){
  var r=await api("me");
@@ -392,7 +401,7 @@ function nz(n){return String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,
 function findTeam(k,names){var T=D[k].t,ns=names.map(nz).filter(Boolean),part=[];
  for(var ab in T){var d=nz(T[ab][0]);for(var i=0;i<ns.length;i++){if(ns[i]==d)return ab;if(ns[i].indexOf(d+" ")==0||d.indexOf(ns[i]+" ")==0)part.push(ab)}}
  var u=part.filter(function(x,i){return part.indexOf(x)==i});return u.length==1?u[0]:null}
-function mfor(k,ha,aa,ko){var h=info(k,ha,ko),a=info(k,aa,ko),l=lgAvg(k,ko);return{h:h,a:a,r:calc({hf:h.gf,hg:h.n,ha:h.ga,hp:h.form,hi:0,af:a.gf,ag:a.n,aa:a.ga,ap:a.form,ai:0,LH:l[0],LA:l[1],FH:h.fat,FA:a.fat},h.name,a.name)}}
+function mfor(k,ha,aa,ko){var h=info(k,ha,ko),a=info(k,aa,ko),l=lgAvg(k,ko);return{h:h,a:a,r:calc({hf:h.gf,hg:h.n,ha:h.ga,hp:h.form,hi:0,af:a.gf,ag:a.n,aa:a.ga,ap:a.form,ai:0,LH:l[0],LA:l[1],FH:h.fat,FA:a.fat,eh:h.elo,ea:a.elo},h.name,a.name)}}
 function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,bt=0,o=0,i,j;
  for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p;if(H>0&&A>0)bt+=p;if(H+A>2)o+=p}
  var t=h+d+a;return{H:h/t,D:d/t,A:a/t,bt:bt/t,o:o/t}}
@@ -454,8 +463,9 @@ async function loadDay(){
  useDyn();
  ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
  for(var i=0;i<codes.length;i++){if(!D[codes[i]]&&!(await ensureSeason(codes[i])))failed.push(codes[i])}
- META={};Object.keys(D).forEach(function(k){D[k].f=[]});
+ META={};Object.keys(D).forEach(function(k){if(!D[k].extra)D[k].f=[]});
  ms.forEach(function(m){var k=m.c;if(!D[k])return;if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];META[m.id]={s:m.s,hs:m.hs,as:m.as,m:m.m,cn:m.cn};D[k].f.push(m.t.slice(0,16)+" "+m.h+" "+m.a+" 0 0 0 "+m.id)});
+ Object.keys(SNAP||{}).forEach(function(k){if(SNAP[k]&&SNAP[k].extra&&SNAP[k].f&&SNAP[k].f.length&&!D[k])D[k]=SNAP[k]});
  if(!Object.keys(D).length&&SNAP){D=SNAP;DYN=false;SNAP=null;MSG="The data source is busy. Showing the saved snapshot."}
  else MSG=failed.length?"Some leagues are still loading because the data source limits requests. Retrying automatically in a minute.":"";
  build();clearTimeout(RETRY);if(failed.length)RETRY=setTimeout(loadDay,65000);
@@ -470,25 +480,68 @@ async function runHistory(){
  ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
  for(var i=0;i<codes.length;i++){if(!D[codes[i]])await ensureSeason(codes[i])}
  build();
- var rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0};
+ var rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0};REL={dc:[],w:[],b:[]};
  ms.sort(function(x,y){return new Date(y.t)-new Date(x.t)}).forEach(function(m){
   var k=m.c;if(!D[k]){skipped++;return}
   if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];
   var md=mfor(k,String(m.h),String(m.a),new Date(m.t)),e=evalGame(md.r,m.hs,m.as),q=L[k]||(L[k]={n:D[k].n,t:{n:0,res:0,dc:0,bt:0,ov:0}});
-  [q.t,A].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
+  rel(md.r,m.hs,m.as);[q.t,A].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
   rows.push("<tr><td>"+esc(new Date(m.t).toLocaleDateString())+"</td><td>"+esc(m.hn)+" "+m.hs+"–"+m.as+" "+esc(m.an)+"<br><span class='mid'>"+esc(D[k].n)+"</span></td><td>"+esc(md.r.side)+" "+pc(md.r.top)+"%</td><td>"+mark(e.res)+"</td><td>"+mark(e.dc)+"</td><td>"+mark(e.bt)+"</td><td>"+mark(e.ov)+"</td></tr>")});
  function pct(x,n){return n?Math.round(100*x/n)+"% ("+x+"/"+n+")":"-"}
  function line(nm,o){return"<tr><td>"+esc(nm)+"</td><td class='n'>"+o.n+"</td><td class='n'>"+pct(o.res,o.n)+"</td><td class='n'>"+pct(o.dc,o.n)+"</td><td class='n'>"+pct(o.bt,o.n)+"</td><td class='n'>"+pct(o.ov,o.n)+"</td></tr>"}
  if(!A.n){b.textContent="No finished games with data in this period.";return}
  b.innerHTML="<table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+Object.keys(L).map(function(k){return line(L[k].n,L[k].t)}).join("")+line("All leagues",A)+"</table>"
- +'<h2 style="margin-top:16px">Game by game</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>'+rows.slice(0,100).join("")+"</table>"
+ +relHtml()+'<h2 style="margin-top:16px">Game by game</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>'+rows.slice(0,100).join("")+"</table>"
  +'<p class="note">Each game is predicted using only results from before kick-off, so this is an honest record, not hindsight. ✓ = the model called it, ✗ = it did not.'+(skipped?" "+skipped+" games skipped (league data not loaded).":"")+" Judge the model over hundreds of games, not a few days.</p>";
  list()
 }
+// Confidence picks, reliability check and the Claude second opinion
+var STR={bal:{dc:70,w:50,b:58},strict:{dc:78,w:58,b:64},vs:{dc:85,w:65,b:70}};
+function tierOf(p,a,b){return p>=a?["Banker","good"]:p>=b?["Strong","mid"]:["Good","mid"]}
+function renderPicks(){
+ var box=document.getElementById("picksBody");if(!box)return;
+ var d=document.getElementById("dt").value,L=STR[document.getElementById("pk").value]||STR.bal,dc=[],w=[],bt=[],thin=0,n=0;
+ ALL.filter(function(g){return ld(g.t)==d}).forEach(function(g){
+  var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
+  var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h.name,A=md.a.name,tag=ht(g.t)+" · "+H+" v "+A,lg=D[g.k].n;n++;
+  if(Math.min(md.h.n,md.a.n)<4&&!(md.h.elo&&md.a.elo)){thin++;return}
+  var p1=r.h+r.d,p2=r.d+r.a,dcp=Math.max(p1,p2)*100;
+  if(dcp>=L.dc)dc.push([dcp,tag,(p1>=p2?"1X ("+H+" or draw)":"X2 ("+A+" or draw)"),lg,tierOf(dcp,85,78)]);
+  if(r.key!="D"&&r.top*100>=L.w)w.push([r.top*100,tag,(r.key=="H"?H:A)+" to win",lg,tierOf(r.top*100,65,58)]);
+  var by=r.bt>=0.5,bp=(by?r.bt:1-r.bt)*100;if(bp>=L.b)bt.push([bp,tag,"Both teams to score: "+(by?"Yes":"No"),lg,tierOf(bp,70,64)])});
+ function sec(t,arr){arr.sort(function(x,y){return y[0]-x[0]});
+  return"<h3 class='lgh' style='grid-column:auto'>"+t+" ("+arr.length+")</h3>"+(arr.length?arr.map(function(x){return"<div class='lvrow'><b>"+esc(x[1])+"</b> <span class='mid'>"+esc(x[3])+"</span><br>"+esc(x[2])+" — <b>"+Math.round(x[0])+"%</b> <span class='tag "+x[4][1]+"'>"+x[4][0]+"</span></div>"}).join(""):"<p class='mid'>No games meet this level.</p>")}
+ if(!n){box.innerHTML="<p class='mid'>No upcoming games on this date.</p>";return}
+ box.innerHTML=sec("Double chance (1X / X2)",dc)+sec("Favourite to win",w)+sec("Both teams to score",bt)
+ +'<p class="note">'+(thin?thin+" game"+(thin>1?"s were":" was")+" left out because a team has too little data yet. ":"")+'Percentages are the model’s own estimates. Check the reliability table under “Past results and model record” to see whether they have held up. Combining many picks into one bet cuts your chance of winning sharply, so only stake what you can afford to lose.</p>'
+}
+function rel(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",p1=r.h+r.d,p2=r.d+r.a;
+ if(p1>=p2)REL.dc.push([p1,act!="A"]);else REL.dc.push([p2,act!="H"]);
+ if(r.key!="D")REL.w.push([r.top,act==r.key]);
+ var by=r.bt>=0.5;REL.b.push([by?r.bt:1-r.bt,by==(hs>0&&as>0)])}
+function relTable(title,arr,edges){
+ var rows=edges.map(function(lo,i){var hi=edges[i+1]||101,xs=arr.filter(function(x){var q=x[0]*100;return q>=lo&&q<hi}),n=xs.length,k=xs.filter(function(x){return x[1]}).length;
+  return n?"<tr><td>"+lo+(hi>100?"% or more":"–"+hi+"%")+"</td><td class='n'>"+n+"</td><td class='n'>"+Math.round(100*k/n)+"%</td></tr>":""}).join("");
+ return rows?"<h3 style='margin:12px 0 4px'>"+title+"</h3><table><tr><th>Model said</th><th>Games</th><th>Actually right</th></tr>"+rows+"</table>":""}
+function relHtml(){return"<h2 style='margin-top:16px'>Does the confidence mean anything?</h2><p class='mid' style='margin:0'>If the model is well calibrated, “Actually right” should be close to what it said. Small counts are noisy.</p>"+relTable("Double chance picks (1X / X2)",REL.dc,[50,60,70,80,90])+relTable("Favourite to win",REL.w,[40,50,60,70])+relTable("Both teams to score (model’s better side)",REL.b,[50,58,65,72])}
+function AICTX(){var R0=LASTR.r;
+ function fm(x){return x?{rank:x.rank||null,points:x.pts,played:x.gp,goalsFor:x.gf,goalsAgainst:x.ga,formPointsPer5:+x.form.toFixed(1),recent:x.lines,flags:x.flags,next:x.next,rating:x.elo||null}:null}
+ return{league:last?last.l:"",date:last?last.d:"",home:LASTR.hn,away:LASTR.an,
+  model:{homeWinPct:pc(R0.h),drawPct:pc(R0.d),awayWinPct:pc(R0.a),doubleChance:R0.dc[0]+" "+pc(R0.dc[1])+"%",bttsYesPct:pc(R0.bt),over25Pct:pc(R0.o25),expectedGoals:[+R0.lh.toFixed(2),+R0.la.toFixed(2)]},
+  homeForm:fm(CTXD&&CTXD.h),awayForm:fm(CTXD&&CTXD.a),missingKeyPlayersPct:{home:v("hi"),away:v("ai")},
+  note:"Model uses goals and form from this season's results only. No injury or line-up data unless stated."}}
+async function askAI(){
+ var b=document.getElementById("aib");if(!LASTR)return;b.textContent="Asking Claude…";
+ var r=await api("ai",{ctx:AICTX()}),j=r.j||{};
+ if(!r.ok){var e=j.error,adm=ME&&ME.role=="admin";
+  b.innerHTML='<p class="note">'+esc(e=="no_ai_key"?"Claude second opinions are not switched on yet. The developer must add ANTHROPIC_API_KEY (see README).":e=="user_limit"?"You have used today’s "+j.limit+" Claude checks. Try again tomorrow.":e=="site_limit"?"The site’s daily Claude limit is used up. Try again tomorrow.":"Claude could not be reached right now. Try again shortly."+(adm&&j.status?" (HTTP "+j.status+(j.message?": "+j.message:"")+")":""))+"</p>";return}
+ var cls=j.stance=="agree"?"good":j.stance=="disagree"?"bad":"mid",lab=j.stance=="agree"?"Claude agrees":j.stance=="disagree"?"Claude disagrees":"Claude says be careful";
+ b.innerHTML='<div class="lvrow"><span class="tag '+cls+'">'+lab+'</span> <span class="mid">confidence: '+esc(j.confidence)+(j.cached?" · saved answer":"")+'</span><p style="margin:8px 0 0">'+esc(j.summary)+"</p>"+(j.risks&&j.risks.length?"<ul style='margin:6px 0 0 18px;padding:0'>"+j.risks.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul>":"")+'<p class="mid" style="margin:8px 0 0;font-size:13px">AI commentary on the model’s numbers, not a guarantee. Claude cannot see line-ups or injuries unless you enter them.</p></div>'
+}
 document.getElementById("go").onclick=run;
 document.getElementById("hb").onclick=runHistory;
-document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
-document.getElementById("dt").onchange=loadDay;
+document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;EH=null;EA=null;CTXD=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
+document.getElementById("dt").onchange=loadDay;document.getElementById("pk").onchange=renderPicks;
 document.getElementById("sc").onchange=summary;
 init();
 if("serviceWorker" in navigator&&location.protocol.indexOf("http")==0){navigator.serviceWorker.register("sw.js").catch(function(){})}
