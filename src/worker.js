@@ -13,7 +13,8 @@ async function ensure(db){if(ready)return;
   db.prepare("CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,uid INTEGER,role TEXT,exp INTEGER)"),
   db.prepare("CREATE TABLE IF NOT EXISTS saves(id INTEGER PRIMARY KEY AUTOINCREMENT,uid INTEGER,data TEXT,created INTEGER)"),
   db.prepare("CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY,v TEXT)"),
-  db.prepare("CREATE TABLE IF NOT EXISTS fails(k TEXT PRIMARY KEY,n INTEGER,t INTEGER)")]);
+  db.prepare("CREATE TABLE IF NOT EXISTS fails(k TEXT PRIMARY KEY,n INTEGER,t INTEGER)"),
+  db.prepare("CREATE TABLE IF NOT EXISTS ai_use(uid INTEGER,day TEXT,n INTEGER,PRIMARY KEY(uid,day))")]);
  try{await db.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run()}catch{}
  ready=true}
 async function sess(db,env,req){
@@ -75,6 +76,25 @@ async function handle(request,env){
  if(!me)return J({error:"login"},401);
  if(p==="me")return J({role:me.role,name:me.name,email:me.email});
  if(p==="data"){const r=await db.prepare("SELECT v FROM settings WHERE k='data'").first();return new Response(r?r.v:JSON.stringify(BUNDLED),{headers:{"content-type":"application/json","cache-control":"no-store"}})}
+const AI_SYS="You are a careful football analyst checking a statistical model's pre-match forecast. You receive JSON with the model's probabilities, recent form and rest flags. You cannot see line-ups, injuries or live news unless they are in the JSON, so never invent them. Judge only whether the model's double-chance, favourite-win and both-teams-to-score picks look sound or fragile, and why (rotation, fixture congestion, derby or cup context, thin data, mismatch in league strength). Reply with ONLY a JSON object: {\"stance\":\"agree|caution|disagree\",\"confidence\":\"high|medium|low\",\"summary\":\"max 60 words\",\"risks\":[\"short risk\"]} with at most 4 risks. Never claim certainty and never give staking advice.";
+ if(p==="ai"&&m==="POST"){
+  const AK=String(env.ANTHROPIC_API_KEY||"").trim();if(!AK)return J({error:"no_ai_key"});
+  const ctx=JSON.stringify(b.ctx||{});if(ctx.length<20||ctx.length>8000)return J({error:"bad_ctx"},400);
+  const key="ai:"+hex(await crypto.subtle.digest("SHA-256",enc.encode(ctx)));
+  const c=await db.prepare("SELECT v FROM settings WHERE k=?").bind(key).first();
+  if(c){try{const o=JSON.parse(c.v);if(Date.now()-o.at<216e5)return J({...o.out,cached:true})}catch{}}
+  const day=new Date().toISOString().slice(0,10),cap=+env.AI_PER_USER||15,gcap=+env.AI_DAILY_CAP||300;
+  const u=await db.prepare("SELECT n FROM ai_use WHERE uid=? AND day=?").bind(me.uid,day).first(),tot=await db.prepare("SELECT COALESCE(SUM(n),0) s FROM ai_use WHERE day=?").bind(day).first();
+  if((u?u.n:0)>=cap)return J({error:"user_limit",limit:cap},429);
+  if(tot.s>=gcap)return J({error:"site_limit"},429);
+  let r;try{r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":AK,"anthropic-version":"2023-06-01","content-type":"application/json"},body:JSON.stringify({model:String(env.AI_MODEL||"claude-sonnet-5-5").trim(),max_tokens:400,system:AI_SYS,messages:[{role:"user",content:ctx}]})})}catch{return J({error:"ai_unreachable"},502)}
+  if(!r.ok){let mm="";try{mm=(await r.json()).error?.message||""}catch{}return J({error:"ai_error",status:r.status,message:String(mm).slice(0,160)},502)}
+  const j=await r.json(),txt=(j.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").trim();
+  let o;try{o=JSON.parse(txt.replace(/^```(?:json)?\s*|\s*```$/g,""))}catch{o={summary:txt.slice(0,700)}}
+  const out={stance:["agree","caution","disagree"].includes(o.stance)?o.stance:"caution",confidence:["high","medium","low"].includes(o.confidence)?o.confidence:"low",summary:clip(o.summary,700),risks:(Array.isArray(o.risks)?o.risks:[]).slice(0,4).map(x=>clip(x,160))};
+  await db.prepare("INSERT INTO ai_use(uid,day,n) VALUES(?1,?2,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1").bind(me.uid,day).run();
+  await db.prepare("INSERT INTO settings(k,v) VALUES(?1,?2) ON CONFLICT(k) DO UPDATE SET v=?2").bind(key,JSON.stringify({at:Date.now(),out})).run();
+  return J(out)}
  if(p==="matches"&&m==="GET"){
   if(!FK)return J({error:"no_key"});
   const f=url.searchParams.get("from")||"",to=url.searchParams.get("to")||"",re=/^\d{4}-\d{2}-\d{2}$/;
@@ -123,8 +143,14 @@ async function handle(request,env){
    if(b.status!=="approved")await db.prepare("DELETE FROM sessions WHERE uid=?").bind(+b.id||0).run();return J({ok:true})}
   if(p==="admin/delete"&&m==="POST"){const id=+b.id||0;await db.batch([db.prepare("DELETE FROM saves WHERE uid=?").bind(id),db.prepare("DELETE FROM sessions WHERE uid=?").bind(id),db.prepare("DELETE FROM users WHERE id=?").bind(id)]);return J({ok:true})}
   if(p==="admin/data"&&m==="POST"){const d=b.data;
-   if(!d||typeof d!=="object"||!Object.values(d).every(l=>l&&l.t&&Array.isArray(l.r)&&Array.isArray(l.f)))return J({error:"bad_format"},400);
-   const v=JSON.stringify(d);if(v.length>400000)return J({error:"too_big"},413);
+   if(!d||typeof d!=="object"||Array.isArray(d))return J({error:"bad_format"},400);
+   const row=await db.prepare("SELECT v FROM settings WHERE k='data'").first();let cur;try{cur=row?JSON.parse(row.v):{...BUNDLED}}catch{cur={...BUNDLED}}
+   for(const [k,l] of Object.entries(d)){
+    if(!/^[A-Za-z0-9_]{1,12}$/.test(k))return J({error:"bad_key"},400);
+    if(l===null){delete cur[k];continue}
+    if(!(l&&l.t&&typeof l.t==="object"&&Array.isArray(l.r)&&Array.isArray(l.f)))return J({error:"bad_format"},400);
+    cur[k]=l}
+   const v=JSON.stringify(cur);if(v.length>400000)return J({error:"too_big"},413);
    await db.prepare("INSERT INTO settings(k,v) VALUES('data',?1) ON CONFLICT(k) DO UPDATE SET v=?1").bind(v).run();return J({ok:true})}}
  return J({error:"not_found"},404)}
 export default{async fetch(request,env){const p=new URL(request.url).pathname;if(p==="/api"||p.startsWith("/api/"))return handle(request,env);return new Response("Not found",{status:404})}};
