@@ -300,51 +300,82 @@ function summary(){
 }
 // Accounts, payment approval and saved predictions are handled by the server (Cloudflare Worker + D1).
 var ME=null,saves=[],mode="login",flash="";
-var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again."};
+var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again.",bad_plan:"Choose a plan.",too_many_pending:"You already have 3 payments waiting. Wait for approval first.",already_permanent:"You are already a permanent member."};
 var WA="254726960303",noteHtml="";
 function waLink(t,n){return"https://wa.me/"+(n||WA)+"?text="+encodeURIComponent(t)}
-function payMsg(n,c){return"Hi, I'm "+n+". I paid KSh 30 to Pochi la Biashara +254 726 960 303. M-Pesa code: "+c+". Please approve my account."}
-function waBtn(n,c){return'<a class="btn" href="'+waLink(payMsg(n,c))+'" target="_blank" rel="noopener">Message us on WhatsApp</a>'}
-function statusHtml(k,n,c){
- if(k=="registered")return"<p><b>Thanks, "+esc(n)+".</b> Your registration is received. We’re checking your KSh 30 payment (M-Pesa code "+esc(c)+"). This usually takes a few minutes. Come back and log in to see predictions once approved.</p><p>"+waBtn(n,c)+"</p>";
- if(k=="pending")return"<p>Your payment is still being checked. You’ll be able to log in as soon as it’s approved. If it has taken more than 30 minutes, contact us on +254 726 960 303.</p><p>"+waBtn(n,c)+"</p>";
- return"<p>Your registration wasn’t approved. This usually means the payment wasn’t received, the amount was wrong, or the M-Pesa code wasn’t found. Check your SMS and register again with the correct 10-character code, or contact us on +254 726 960 303 and we’ll help.</p><p>"+waBtn(n,c)+"</p>"
+function payMsg(n,c,pl,amt){return"Hi, I'm "+n+". I paid "+money(amt)+" for the "+planName(pl)+" plan to Pochi la Biashara +254 726 960 303. M-Pesa code: "+c+". Please approve my payment."}
+function waBtn(n,c,pl,amt){return'<a class="btn" href="'+waLink(payMsg(n,c,pl,amt))+'" target="_blank" rel="noopener">Message us on WhatsApp</a>'}
+function statusHtml(k,n,c,pl,amt){
+ var w="<p>"+waBtn(n,c,pl,amt)+"</p>";
+ if(k=="registered")return"<p><b>Thanks, "+esc(n)+".</b> Your registration is received. We’re checking your "+money(amt)+" payment for the "+esc(planName(pl))+" plan (M-Pesa code "+esc(c)+"). This usually takes a few minutes. Come back and log in to see predictions once approved.</p>"+w;
+ if(k=="pending")return"<p>Your payment is still being checked. You’ll be able to log in as soon as it’s approved. If it has taken more than 30 minutes, contact us on +254 726 960 303.</p>"+w;
+ return"<p>Your registration wasn’t approved. This usually means the payment wasn’t received, the amount was wrong, or the M-Pesa code wasn’t found. Check your SMS and register again with the correct 10-character code, or contact us on +254 726 960 303 and we’ll help.</p>"+w
 }
 async function api(path,body,method){
  var o={credentials:"same-origin",method:method||(body?"POST":"GET"),headers:{"content-type":"application/json"}};
  if(body)o.body=JSON.stringify(body);
- try{var r=await fetch("/api/"+path,o),j={};try{j=await r.json()}catch(e){}return{ok:r.ok,status:r.status,j:j}}catch(e){return{ok:false,status:0,j:{}}}
+ try{var r=await fetch("/api/"+path,o),j={};try{j=await r.json()}catch(e){}
+  if(r.status==402&&ME&&ME.role=="user"){ME.active=false;var ap=document.getElementById("app");if(ap)ap.hidden=true;renderAcct()}
+  return{ok:r.ok,status:r.status,j:j}}catch(e){return{ok:false,status:0,j:{}}}
 }
+var PLANS=[],PLN={},PNAME={day:"24 hours",week:"Weekly",month:"Monthly",year:"Yearly",life:"Permanent",legacy:"Registration (old)"};
+function money(n){return"KSh "+Number(n||0).toLocaleString("en-KE")}
+function planName(id){return PNAME[id]||String(id||"")}
+async function loadPlans(){var r=await api("plans");PLANS=r.ok&&r.j.plans?r.j.plans:[];PLN={};PLANS.forEach(function(q){PLN[q.id]=q})}
+function planOpts(sel){return PLANS.map(function(q){return'<option value="'+esc(q.id)+'"'+(q.id==sel?" selected":"")+">"+esc(q.name)+" — "+money(q.price)+"</option>"}).join("")}
+function payBox(id){var q=PLN[id]||PLANS[0];if(!q)return"";return"<b>Pay "+money(q.price)+" for the "+esc(q.name)+" plan</b><ol><li>Open M-Pesa and choose Pochi la Biashara.</li><li>Pay "+money(q.price)+" to <b>+254 726 960 303</b>.</li><li>Enter the M-Pesa confirmation code from your SMS below.</li><li>The developer checks the payment and approves it. "+(q.perm?"Your access never expires.":"Your time starts the first time you log in after approval.")+"</li></ol>"}
+function left(ms){var h=Math.floor(ms/36e5);return h<48?(h<1?"less than an hour":h+" hour"+(h==1?"":"s"))+" left":Math.floor(h/24)+" days left"}
+function planLine(u){if(u.role=="admin")return"Developer";if(u.lifetime)return"Permanent member (never expires)";if(u.active)return esc(planName(u.plan))+" plan · expires "+esc(new Date(u.expires).toLocaleString())+" ("+left(u.expires-Date.now())+")";return u.expires?"Your "+esc(planName(u.plan))+" plan ended "+esc(new Date(u.expires).toLocaleString()):"No active plan"}
 function renderAcct(offline){
  var b=document.getElementById("acctBody");
  if(offline){b.innerHTML='<p class="bad" style="margin:0">The sign-in server is not connected. Finish the Cloudflare setup in README.txt (D1 database and the ADMIN settings), then reload.</p>';return}
- if(ME){b.innerHTML='<div class="acct"><div class="av">'+esc((ME.name||"?").charAt(0).toUpperCase())+'</div><div><b>'+esc(ME.name)+"</b>"+(ME.role=="admin"?'<span class="chip">Developer</span>':'<span class="chip">Member</span>')+'<br><span class="mid">'+esc(ME.email)+' · Predictions are chances, not guarantees.</span></div><button class="alt" id="lo">Log out</button></div>';
-  document.getElementById("lo").onclick=async function(){await api("logout",{});location.reload()};return}
+ if(ME){var u=ME,exp=u.role=="user"&&!u.active;
+  b.innerHTML='<div class="acct"><div class="av">'+esc((u.name||"?").charAt(0).toUpperCase())+'</div><div><b>'+esc(u.name)+"</b>"+(u.role=="admin"?'<span class="chip">Developer</span>':'<span class="chip">Member</span>')+'<br><span class="mid">'+esc(u.email)+"</span><br>"+planLine(u)+(u.pending?' <span class="tag mid">Payment awaiting approval</span>':"")+'</div><button class="alt" id="lo">Log out</button></div>'
+  +(exp?'<p class="note"><b>Your access has ended.</b> Choose a plan below to continue. Predictions stay locked until your payment is approved.</p>':"")
+  +(u.role=="user"&&!u.lifetime?'<details id="rn" class="card" '+(exp?"open":"")+'><summary>Renew or upgrade</summary><div class="pay" id="rpay" style="margin-top:10px">'+payBox("")+'</div><label for="rpl">Plan</label><select id="rpl">'+planOpts()+'</select><label for="rcd">M-Pesa confirmation code (10 characters)</label><input type="text" id="rcd" maxlength="10" autocapitalize="characters" autocomplete="off"><p style="margin:12px 0 0"><button id="rgo">Submit payment</button> <button class="alt" id="rref">I’ve been approved, refresh</button></p><div id="rmsg" class="bad" role="alert"></div></details>':"")
+  +'<div id="mypay"></div>';
+  document.getElementById("lo").onclick=async function(){await api("logout",{});location.reload()};
+  var rp=document.getElementById("rpl");
+  if(rp){rp.onchange=function(){document.getElementById("rpay").innerHTML=payBox(rp.value)};document.getElementById("rpay").innerHTML=payBox(rp.value);
+   document.getElementById("rgo").onclick=async function(){var m=document.getElementById("rmsg");m.textContent="";
+    var q=await api("renew",{plan:rp.value,code:document.getElementById("rcd").value.trim().toUpperCase()});
+    if(!q.ok){m.textContent=ERR[q.j.error]||"Could not send that. Try again.";return}
+    m.className="mid";m.textContent="Payment sent. The developer will approve it soon, then press refresh.";document.getElementById("rcd").value="";ME.pending=(ME.pending||0)+1;loadMyPay()};
+   document.getElementById("rref").onclick=async function(){var q=await api("me");if(q.ok){ME=q.j;await enter()}}}
+  if(u.role=="user")loadMyPay();
+  return}
+ if(!PLANS.length){b.innerHTML='<p class="mid" style="margin:0">No plans are available right now. Please contact the developer on +254 726 960 303.</p>';return}
  var reg=mode=="register";
- b.innerHTML='<div class="pay"><b>Registration fee: KSh 30 (one time)</b><ol><li>Open M-Pesa and choose Pochi la Biashara.</li><li>Pay KSh 30 to <b>+254 726 960 303</b>.</li><li>Register below with the M-Pesa confirmation code from your SMS.</li><li>The developer checks the payment and approves your account. Then you can log in and see predictions.</li></ol></div>'
+ b.innerHTML=(reg?'<div class="pay" id="paybox">'+payBox("")+'</div>':'<div class="pay"><b>New here?</b> Choose Register, pick a plan (from '+money(Math.min.apply(null,PLANS.map(function(q){return q.price})))+'), pay by M-Pesa Pochi la Biashara to +254 726 960 303, and the developer approves you.</div>')
  +'<div class="tabs" role="tablist"><button type="button" class="alt sm" id="tl" aria-pressed="'+(!reg)+'">Log in</button><button type="button" class="alt sm" id="tr" aria-pressed="'+reg+'">Register</button></div>'
  +(noteHtml?'<div class="note">'+noteHtml+"</div>":"")
- +'<form id="af" autocomplete="on">'+(reg?'<label for="un">Name</label><input type="text" id="un" autocomplete="name" required><label for="uh">WhatsApp phone number</label><input type="tel" id="uh" autocomplete="tel" placeholder="0712 345 678" required>':"")
+ +'<form id="af" autocomplete="on">'+(reg?'<label for="upl">Plan</label><select id="upl">'+planOpts()+'</select><label for="un">Name</label><input type="text" id="un" autocomplete="name" required><label for="uh">WhatsApp phone number</label><input type="tel" id="uh" autocomplete="tel" placeholder="0712 345 678" required>':"")
  +'<label for="ue">Email</label><input type="email" id="ue" autocomplete="email" required>'
  +'<label for="up">Password (8 or more characters)</label><input type="password" id="up" autocomplete="'+(reg?"new-password":"current-password")+'" minlength="8" required>'
  +(reg?'<label for="uc">M-Pesa confirmation code (10 characters)</label><input type="text" id="uc" maxlength="10" minlength="10" autocapitalize="characters" autocomplete="off" required>':"")
  +'<p style="margin:14px 0 0"><button type="submit">'+(reg?"Register":"Log in")+'</button> '+(reg?"":'<button type="button" class="alt" id="ck">Check my status</button>')+'</p><div id="am" role="alert" class="bad"></div></form>';
  document.getElementById("tl").onclick=function(){mode="login";noteHtml="";renderAcct()};
  document.getElementById("tr").onclick=function(){mode="register";noteHtml="";renderAcct()};
+ if(reg){var pl=document.getElementById("upl");pl.onchange=function(){document.getElementById("paybox").innerHTML=payBox(pl.value)};document.getElementById("paybox").innerHTML=payBox(pl.value)}
  async function go(){var m=document.getElementById("am");m.textContent="";
-  var em=document.getElementById("ue").value.trim(),pw=document.getElementById("up").value,r,nm,cd;
-  if(reg){nm=document.getElementById("un").value.trim();cd=document.getElementById("uc").value.trim().toUpperCase();
-   r=await api("register",{name:nm,email:em,password:pw,code:cd,phone:document.getElementById("uh").value.trim()})}
+  var em=document.getElementById("ue").value.trim(),pw=document.getElementById("up").value,r,nm,cd,pid;
+  if(reg){nm=document.getElementById("un").value.trim();cd=document.getElementById("uc").value.trim().toUpperCase();pid=document.getElementById("upl").value;
+   r=await api("register",{name:nm,email:em,password:pw,code:cd,phone:document.getElementById("uh").value.trim(),plan:pid})}
   else r=await api("login",{email:em,password:pw});
-  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"")}else m.textContent=(ERR[e]||"Could not complete that. Try again.")+(e=="bad"&&r.j.admin_set===false?" Note for the developer: ADMIN_EMAIL and ADMIN_PASSWORD are not set on the server yet.":"");return}
-  if(reg){mode="login";noteHtml=statusHtml("registered",nm,cd);renderAcct();return}
+  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"",r.j.plan,r.j.amount)}else m.textContent=(ERR[e]||"Could not complete that. Try again.")+(e=="bad"&&r.j.admin_set===false?" Note for the developer: ADMIN_EMAIL and ADMIN_PASSWORD are not set on the server yet.":"");return}
+  if(reg){mode="login";noteHtml=statusHtml("registered",nm,cd,pid,(PLN[pid]||{}).price);renderAcct();return}
   ME=r.j;await enter()}
  document.getElementById("af").onsubmit=function(e){e.preventDefault();go()};
  var ck=document.getElementById("ck");if(ck)ck.onclick=function(){var f=document.getElementById("af");if(f.reportValidity())go()}
 }
+async function loadMyPay(){var el=document.getElementById("mypay");if(!el)return;var r=await api("mypayments");var it=r.ok&&r.j.items?r.j.items:[];
+ el.innerHTML=it.length?'<details style="margin-top:10px"><summary>My payments</summary><table><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Code</th><th>Status</th></tr>'+it.map(function(x){return"<tr><td>"+esc(dstr(x.created))+"</td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td>"+esc(x.mpesa)+"</td><td>"+esc(x.status)+"</td></tr>"}).join("")+"</table></details>":""}
+function dstr(t){return t?new Date(t).toLocaleString():"-"}
 async function enter(){
+ renderAcct();
+ if(ME.role=="user"&&!ME.active){document.getElementById("app").hidden=true;return}
  var r=await api("data");if(r.ok&&r.j&&typeof r.j=="object"){D=r.j;build()}
- renderAcct();document.getElementById("app").hidden=false;SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel()
+ document.getElementById("app").hidden=false;SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel()
 }
 async function loadSaves(){var r=await api("saves");saves=r.ok&&r.j.items?r.j.items:[];renderMine()}
 async function saveLast(){
@@ -359,37 +390,68 @@ function renderMine(){
  b.innerHTML=h+"</table>";
  b.querySelectorAll("button[data-i]").forEach(function(x){x.onclick=async function(){await api("saves?id="+x.dataset.i,null,"DELETE");loadSaves()}})
 }
-function tplMsg(k,u){var n=u.name,c=u.mpesa;
- return k=="approved"?"Hi "+n+", we've received your KSh 30 (code "+c+"). Your account is approved. Log in here: "+location.origin+". Welcome to Ettylinks Matchday Prediction Model.":
+function tplMsg(k,u){var n=u.name,c=u.mpesa,pn=planName(u.plan),a=money(u.amount);
+ return k=="approved"?"Hi "+n+", we've received your "+a+" (code "+c+"). Your "+pn+" access is approved. Log in here: "+location.origin+". "+(u.plan=="life"?"It never expires.":"Your time starts the first time you log in."):
  k=="checking"?"Hi "+n+", we've got your registration but can't see payment "+c+" yet. M-Pesa can be slow, so please check again in 15 minutes. If your SMS shows it went through, reply with a screenshot.":
- k=="amount"?"Hi "+n+", payment "+c+" was not KSh 30. Registration is KSh 30. Please send the balance to Pochi la Biashara +254 726 960 303 and reply with the new code.":
- k=="used"?"Hi "+n+", code "+c+" has already been used on another account. Please pay KSh 30 to Pochi la Biashara +254 726 960 303 and register with your own code.":
+ k=="amount"?"Hi "+n+", payment "+c+" was not "+a+". The "+pn+" plan costs "+a+". Please send the balance to Pochi la Biashara +254 726 960 303 and reply with the new code.":
+ k=="used"?"Hi "+n+", code "+c+" has already been used on another account. Please pay "+a+" to Pochi la Biashara +254 726 960 303 and register with your own code.":
+ k=="remind"?"Hi "+n+", your "+pn+" access ends "+(u.expires?new Date(u.expires).toLocaleString():"soon")+". To keep going, log in at "+location.origin+", choose Renew, pay to Pochi la Biashara +254 726 960 303 and enter the M-Pesa code.":
  "Hi "+n+", we couldn't find M-Pesa code "+c+". Check the SMS and send the 10-character code again, or reply here for help."}
+var RF="",RT="",UF="all",RPT=null;
+function uState(u){if(u.status=="pending")return"pending";if(u.status=="rejected")return"rejected";if(u.lifetime)return"permanent";return u.expires&&u.expires>Date.now()?"active":"expired"}
+function csvDown(name,rows){var t=rows.map(function(r){return r.map(function(c){return'"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 async function devPanel(){
  var box=document.getElementById("dev"),body=document.getElementById("devBody");
  if(!ME||ME.role!="admin"){box.hidden=true;return}
- box.hidden=false;var r=await api("admin/users");if(!r.ok){body.textContent="Could not load users.";return}
- var us=r.j.users||[],pend=us.filter(function(u){return u.status=="pending"}),rest=us.filter(function(u){return u.status!="pending"});
- function dt(t){return new Date(t).toLocaleString()}
- function wa(u){return"<select data-s='"+u.id+"' aria-label='Message'><option value='approved'>Approved</option><option value='checking'>Still checking</option><option value='amount'>Wrong amount</option><option value='used'>Code reused</option><option value='notfound'>Code not found</option></select> <button class='alt sm' data-w='"+u.id+"'>WhatsApp</button>"}
- var h="<p><b>"+pend.length+"</b> waiting for approval · <b>"+us.length+"</b> accounts</p>";
- h+="<h2>Pending payments</h2>"+(pend.length?"<table><tr><th>Person</th><th>M-Pesa code</th><th>Registered</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td class='n'>"+esc(u.mpesa)+"</td><td>"+esc(dt(u.created))+"</td><td><button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> <button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Reject</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nobody is waiting.</p>");
- h+="<h2 style='margin-top:16px'>All other accounts</h2>"+(rest.length?"<table><tr><th>Person</th><th>Status</th><th>Saved</th><th>Decide</th><th>Message</th></tr>"+rest.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+" · "+esc(u.mpesa)+"</span></td><td>"+esc(u.status)+"</td><td class='n'>"+u.n+"</td><td>"+(u.status=="approved"?"<button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Revoke</button> ":"<button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> ")+"<button class='alt sm' data-d='"+u.id+"'>Remove</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No other accounts yet.</p>");
+ box.hidden=false;if(!RF)RF=ld(new Date(Date.now()-29*864e5));if(!RT)RT=ld(new Date());
+ var r=await api("admin/report?from="+RF+"&to="+RT+"&tz="+(-new Date().getTimezoneOffset()));
+ if(!r.ok){body.textContent="Could not load the report.";return}
+ RPT=r.j;var S=r.j.summary,U=S.users,pend=r.j.pending,pays=r.j.payments,users=r.j.users;
+ var pr=await api("admin/plans"),AP=pr.ok?pr.j.plans:[];
+ function tile(t,v,sub){return"<div class='lvrow'><span class='mid'>"+t+"</span><br><span class='xg'>"+v+"</span>"+(sub?"<br><span class='mid'>"+sub+"</span>":"")+"</div>"}
+ function menu(id,opts){return"<select data-s='"+id+"' aria-label='Message'>"+opts+"</select> <button class='alt sm' data-w='"+id+"'>WhatsApp</button>"}
+ var payOpts="<option value='approved'>Approved</option><option value='checking'>Still checking</option><option value='amount'>Wrong amount</option><option value='used'>Code reused</option><option value='notfound'>Code not found</option>";
+ var h="<div class='grid'>"+tile("Revenue ("+esc(RF)+" to "+esc(RT)+")",money(S.revenue),S.confirmed+" confirmed payments")+tile("Waiting for approval",S.pendingCount,money(S.pendingAmount))+tile("Active members",U.active,U.permanent+" permanent · "+U.expiringSoon+" expiring within 3 days")+tile("Expired / pending / total",U.expired+" / "+U.pending+" / "+U.total,U.rejected+" rejected")+"</div>";
+ h+="<h2 style='margin-top:16px'>Payments waiting for approval</h2>"+(pend.length?"<table><tr><th>Person</th><th>Plan</th><th>Amount</th><th>M-Pesa code</th><th>Sent</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(x){return"<tr><td>"+esc(x.name||"removed user")+"<br><span class='mid'>"+esc(x.email||"")+" · "+esc(x.phone||"no phone")+"</span></td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td class='n'>"+esc(x.mpesa)+"</td><td>"+esc(dstr(x.created))+"</td><td><button class='sm' data-pc='"+x.id+"'>Approve</button> <button class='alt sm' data-pr='"+x.id+"'>Reject</button></td><td>"+menu("p"+x.id,payOpts)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nothing is waiting.</p>");
+ h+="<h2 style='margin-top:16px'>Payments report</h2><div class='grid'><div><label for='rf'>From</label><input type='date' id='rf' value='"+esc(RF)+"'></div><div><label for='rt'>To</label><input type='date' id='rt' value='"+esc(RT)+"'></div></div><p><button id='rr'>Run report</button> <button class='alt' id='xp'>Export payments (CSV)</button> <button class='alt' id='xu'>Export users (CSV)</button></p>";
+ var bp=Object.keys(S.byPlan);
+ h+=bp.length?"<table><tr><th>Plan</th><th>Payments</th><th>Total</th></tr>"+bp.map(function(k){return"<tr><td>"+esc(planName(k))+"</td><td class='n'>"+S.byPlan[k].n+"</td><td class='n'>"+money(S.byPlan[k].sum)+"</td></tr>"}).join("")+"<tr><td><b>All plans</b></td><td class='n'>"+S.confirmed+"</td><td class='n'>"+money(S.revenue)+"</td></tr></table>":"<p class='mid'>No confirmed payments in this period.</p>";
+ var dk=Object.keys(S.daily).sort().reverse();
+ if(dk.length)h+="<h3 style='margin:12px 0 4px'>By day</h3><table><tr><th>Day</th><th>Payments</th><th>Total</th></tr>"+dk.map(function(k){return"<tr><td>"+esc(k)+"</td><td class='n'>"+S.daily[k].n+"</td><td class='n'>"+money(S.daily[k].sum)+"</td></tr>"}).join("")+"</table>";
+ h+="<h3 style='margin:12px 0 4px'>All payments in this period ("+pays.length+")</h3>"+(pays.length?"<table><tr><th>Date</th><th>Person</th><th>Plan</th><th>Amount</th><th>Code</th><th>Status</th></tr>"+pays.map(function(x){return"<tr><td>"+esc(dstr(x.created))+"</td><td>"+esc(x.name||"removed user")+"<br><span class='mid'>"+esc(x.email||"")+"</span></td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td>"+esc(x.mpesa)+"</td><td>"+esc(x.status)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>None.</p>");
+ var shown=users.filter(function(u){return UF=="all"||uState(u)==UF});
+ h+="<h2 style='margin-top:16px'>Users report</h2><label for='uf'>Show</label><select id='uf'>"+["all","active","permanent","expired","pending","rejected"].map(function(k){return"<option value='"+k+"'"+(k==UF?" selected":"")+">"+k+"</option>"}).join("")+"</select>";
+ h+=shown.length?"<table><tr><th>Person</th><th>Plan</th><th>Status</th><th>Expires</th><th>Last login</th><th>Saved</th><th>Actions</th></tr>"+shown.map(function(u){var st=uState(u);return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td>"+esc(u.plan?planName(u.plan):"-")+"</td><td>"+st+"</td><td>"+(u.lifetime?"never":esc(dstr(u.expires)))+"</td><td>"+esc(dstr(u.last_login))+"</td><td class='n'>"+u.n+"</td><td><select data-g='"+u.id+"' aria-label='Plan to give'>"+AP.map(function(q){return"<option value='"+q.id+"'>"+esc(q.name)+"</option>"}).join("")+"</select> <button class='sm' data-gv='"+u.id+"'>Give access</button> <button class='alt sm' data-rv='"+u.id+"'>Revoke</button> <button class='alt sm' data-d='"+u.id+"'>Remove</button> "+menu("u"+u.id,"<option value='remind'>Expiry reminder</option>")+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No users match.</p>";
+ h+="<h2 style='margin-top:16px'>Plans and prices</h2><table><tr><th>Plan</th><th>Price (KSh)</th><th>On sale</th></tr>"+AP.map(function(q){return"<tr><td>"+esc(q.name)+"</td><td><input type='number' min='1' max='1000000' data-pp='"+q.id+"' value='"+q.price+"' aria-label='Price'></td><td><input type='checkbox' data-po='"+q.id+"'"+(q.on?" checked":"")+" aria-label='On sale'></td></tr>"}).join("")+"</table><p><button class='alt' id='ps'>Save prices</button> <span id='pm' class='mid'></span></p><p class='note'>New prices apply to new payments. Payments already sent keep the price they were made at.</p>";
  h+="<h2 style='margin-top:16px'>Data feed</h2><p><button class='alt' id='ft'>Test data feed</button></p><div id='fm' class='note'>Press the button to see exactly what football-data.org answers to your key.</div>";
- h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste JSON for the leagues to add or replace, e.g. Europa League data (see templates/europa-conference-example.json). Use null to delete a league.'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
+ h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste JSON for the leagues to add or replace, e.g. Europa League data (see templates/europa-conference-example.json). Use null to delete a league.'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see the right amount and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
  body.innerHTML=h;
- body.querySelectorAll("button[data-a]").forEach(function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.u,status:x.dataset.a});devPanel()}});
- body.querySelectorAll("button[data-d]").forEach(function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions?")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
- body.querySelectorAll("button[data-w]").forEach(function(x){x.onclick=function(){var u=us.filter(function(q){return q.id==x.dataset.w})[0],k=body.querySelector("select[data-s='"+x.dataset.w+"']").value;if(u&&u.phone)window.open(waLink(tplMsg(k,u),u.phone),"_blank","noopener")}});
- document.getElementById("ft").onclick=async function(){var m=document.getElementById("fm");m.textContent="Testing…";var q=await api("admin/feedtest");var j=q.j||{};
-  if(!q.ok){m.textContent="The test could not run. Log in again and retry.";return}
+ function q(sel,fn){body.querySelectorAll(sel).forEach(fn)}
+ q("button[data-pc]",function(x){x.onclick=async function(){await api("admin/payment",{id:+x.dataset.pc,decision:"confirm"});devPanel()}});
+ q("button[data-pr]",function(x){x.onclick=async function(){await api("admin/payment",{id:+x.dataset.pr,decision:"reject"});devPanel()}});
+ q("button[data-gv]",function(x){x.onclick=async function(){var s0=body.querySelector("select[data-g='"+x.dataset.gv+"']").value;await api("admin/grant",{id:+x.dataset.gv,plan:s0});devPanel()}});
+ q("button[data-rv]",function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.rv,status:"rejected"});devPanel()}});
+ q("button[data-d]",function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions? Payment records are kept.")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
+ q("button[data-w]",function(x){x.onclick=function(){var id=x.dataset.w,k=body.querySelector("select[data-s='"+id+"']").value,o;
+  if(id[0]=="p"){var y=pend.filter(function(z){return z.id==id.slice(1)})[0];o=y&&{name:y.name,mpesa:y.mpesa,plan:y.plan,amount:y.amount,phone:y.phone}}
+  else{var y2=users.filter(function(z){return z.id==id.slice(1)})[0];o=y2&&{name:y2.name,mpesa:"",plan:y2.plan,amount:0,phone:y2.phone,expires:y2.expires}}
+  if(o&&o.phone)window.open(waLink(tplMsg(k,o),o.phone),"_blank","noopener")}});
+ document.getElementById("rr").onclick=function(){var a=document.getElementById("rf").value,z=document.getElementById("rt").value;if(a&&z&&z>=a){RF=a;RT=z;devPanel()}};
+ document.getElementById("uf").onchange=function(){UF=this.value;devPanel()};
+ document.getElementById("xp").onclick=function(){csvDown("ettylinks-payments-"+RF+"-to-"+RT+".csv",[["date","name","email","phone","plan","amount_kes","mpesa_code","status"]].concat(pays.map(function(x){return[new Date(x.created).toISOString(),x.name,x.email,x.phone,planName(x.plan),x.amount,x.mpesa,x.status]})))};
+ document.getElementById("xu").onclick=function(){csvDown("ettylinks-users.csv",[["name","email","phone","plan","state","expires","last_login","registered","saved_predictions"]].concat(users.map(function(u){return[u.name,u.email,u.phone,u.plan?planName(u.plan):"",uState(u),u.lifetime?"never":(u.expires?new Date(u.expires).toISOString():""),u.last_login?new Date(u.last_login).toISOString():"",new Date(u.created).toISOString(),u.n]}))) };
+ document.getElementById("ps").onclick=async function(){var o={},m=document.getElementById("pm");body.querySelectorAll("input[data-pp]").forEach(function(i){o[i.dataset.pp]={price:+i.value,on:body.querySelector("input[data-po='"+i.dataset.pp+"']").checked}});
+  var z=await api("admin/plans",{plans:o});m.textContent=z.ok?"Prices saved.":"Could not save: use whole numbers above 0.";if(z.ok)loadPlans()};
+ document.getElementById("ft").onclick=async function(){var m=document.getElementById("fm");m.textContent="Testing…";var z=await api("admin/feedtest");var j=z.j||{};
+  if(!z.ok){m.textContent="The test could not run. Log in again and retry.";return}
   if(!j.has_key){m.textContent="The server has no FOOTBALL_DATA_KEY. Add it as a Secret on this Worker (Settings > Variables and Secrets, not Build) and redeploy.";return}
   var hint=j.status==200?"The feed is working.":j.status==0?"The server could not reach football-data.org.":(j.status==400||j.status==401||j.status==403)?"The key was rejected or is not allowed. Re-copy the token from your football-data.org email, with no spaces, save it again and redeploy.":j.status==429?"Rate limited. Wait a minute and try again.":j.status>=500?"football-data.org is having trouble. Try later.":"Unexpected answer.";
   m.textContent="Key found ("+j.key_length+" characters; tokens are usually 32). football-data.org answered HTTP "+j.status+(j.message?": "+j.message:"")+". "+hint};
  document.getElementById("ds").onclick=async function(){var m=document.getElementById("dm");try{var o=JSON.parse(document.getElementById("dd").value)}catch(e){m.textContent="That is not valid JSON.";return}
-  var q=await api("admin/data",{data:o});m.textContent=q.ok?"Data updated and merged. Reload to see it.":"Could not save: "+(q.j.error||"error")}
+  var z=await api("admin/data",{data:o});m.textContent=z.ok?"Data updated and merged. Reload to see it.":"Could not save: "+(z.j.error||"error")}
 }
 async function init(){
+ await loadPlans();
  var r=await api("me");
  if(r.ok&&r.j&&r.j.role){ME=r.j;await enter();return}
  if(r.status==401){renderAcct();return}
