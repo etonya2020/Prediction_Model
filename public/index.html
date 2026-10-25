@@ -81,6 +81,14 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 .hit{color:var(--ok);font-weight:700}.miss{color:var(--warn);font-weight:700}
 .sr{position:absolute;left:-9999px}
 .lgh{grid-column:1/-1;margin:14px 0 0;font:700 18px "Barlow Condensed",sans-serif;color:var(--goldtext)}
+.off{display:none!important}
+.tabbar{display:flex;gap:6px;overflow-x:auto;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line);margin-top:8px;-webkit-overflow-scrolling:touch}
+.tabbar button{white-space:nowrap;flex:0 0 auto}
+.tabbar button[aria-selected=true]{background:var(--gold);color:#0D1220;border-color:var(--gold)}
+.fbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:6px 0 0}
+.fbar[hidden],.fbar>div[hidden]{display:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0}
+.tiles .lvrow{margin:0}.tiles .xg{font-size:24px}
 </style>
 </head>
 <body>
@@ -92,21 +100,27 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 </header>
 <main>
 
-<section class="card" id="acct">
+<nav id="tabs" class="tabbar" role="tablist" aria-label="Sections" hidden></nav>
+<div id="fbar" class="fbar" hidden>
+ <div id="fdw"><label for="dt">Date</label><input type="date" id="dt" value="2026-10-18"></div>
+ <div id="flw"><label for="fl">League</label><select id="fl"><option value="all">All leagues</option></select></div>
+ <div id="fsw"><label for="fs">Status</label><select id="fs"><option value="all">All</option><option value="live">Live</option><option value="up">Upcoming</option><option value="fin">Finished</option></select></div>
+ <div id="fqw"><label for="fq">Team</label><input type="text" id="fq" placeholder="Search a team" autocomplete="off"></div>
+</div>
+
+<section class="card" id="acct" data-tab="account">
  <h2>Account</h2>
  <div id="acctBody">Checking sign-in…</div>
 </section>
 
 <div id="app" hidden>
-<section class="card">
- <h2>Match day</h2>
- <label for="dt">Date</label>
- <input type="date" id="dt" value="2026-10-18">
+<section class="card" id="md" data-tab="games">
+ <h2>Games</h2>
  <div id="list" class="fxlist" aria-live="polite"></div>
  <p class="note">Games load automatically for the date you pick, from the leagues your data feed covers. If the feed is not connected, a saved snapshot is shown instead. Any other league works through the manual match below.</p>
 </section>
 
-<section class="card" id="picks">
+<section class="card" id="picks" data-tab="picks">
  <h2>Confidence picks</h2>
  <p class="mid" style="margin:0 0 6px">Double chance, favourite to win and both teams to score for the chosen day. Only the games the model is most sure about.</p>
  <label for="pk">Strictness</label>
@@ -114,21 +128,27 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <div id="picksBody"></div>
 </section>
 
-<section class="card" id="live">
+<section class="card" id="live" data-tab="live">
  <h2>Live and concluded games</h2>
  <div id="liveBody" aria-live="polite">Loading…</div>
 </section>
 
-<div id="out" hidden aria-live="polite"></div>
+<section class="card" id="lgs" data-tab="leagues">
+ <h2>League analysis</h2>
+ <div id="lgsBody"></div>
+</section>
 
-<section class="card">
+<section class="card" id="anh" data-tab="analysis"><h2>Match analysis</h2><p class="mid" style="margin:0">Pick a game from Games, Picks or Live and its full analysis appears here.</p></section>
+<div id="out" hidden aria-live="polite" data-tab="analysis"></div>
+
+<section class="card" id="sumcard" data-tab="record">
  <h2>System prediction summary</h2>
  <label for="sc">Scope</label>
  <select id="sc"><option value="day">Selected match day</option><option value="all">All loaded games (a day either side)</option></select>
  <div id="sum" class="scroll"></div>
 </section>
 
-<section class="card" id="hist">
+<section class="card" id="hist" data-tab="record">
  <h2>Past results and model record</h2>
  <label for="hd">Look back</label>
  <select id="hd"><option value="3">3 days</option><option value="7" selected>7 days</option></select>
@@ -136,17 +156,17 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <div id="histBody" class="scroll"></div>
 </section>
 
-<section class="card">
+<section class="card" id="mycard" data-tab="saved">
  <h2>My predictions</h2>
  <div id="mine" class="scroll">Run a prediction, then choose Save.</div>
 </section>
 
-<section class="card" id="dev" hidden>
+<section class="card" id="dev" hidden data-tab="admin">
  <h2>Developer panel <span class="chip">Developer</span></h2>
  <div id="devBody" class="scroll">Loading…</div>
 </section>
 
-<details class="card" id="form" open>
+<details class="card" id="form" open data-tab="analysis">
  <summary>Inputs used (edit to test what-ifs, or type any match)</summary>
  <div class="grid">
   <div>
@@ -228,7 +248,7 @@ function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),
 
 var DYN=false,SNAP=null,META={},MSG="",RETRY=null;
 function list(){
- var d=document.getElementById("dt").value,items=ALL.filter(function(g){return ld(g.t)==d}).sort(function(a,b){var x=D[a.k].n,y=D[b.k].n;return x<y?-1:x>y?1:a.t-b.t}),box=document.getElementById("list"),cur="";
+ lgOpts();var d=document.getElementById("dt").value,items=ALL.filter(function(g){return ld(g.t)==d&&gFilter(g)}).sort(function(a,b){var x=D[a.k].n,y=D[b.k].n;return x<y?-1:x>y?1:a.t-b.t}),box=document.getElementById("list"),cur="";
  box.innerHTML=MSG?'<p class="note">'+esc(MSG)+"</p>":"";
  if(!items.length)box.innerHTML+='<p class="note">No games found for this date'+(DYN?" in the leagues your data plan covers.":" in the saved snapshot (10–24 Oct 2026). Connect the live feed (README) to load any date.")+"</p>";
  items.forEach(function(g){
@@ -248,14 +268,14 @@ function pick(g){
  sv("hn",h.name);sv("hg",h.n);sv("hf",h.gf);sv("ha",h.ga);sv("hp",h.form.toFixed(1));
  sv("an",a.name);sv("ag",a.n);sv("af",a.gf);sv("aa",a.ga);sv("ap",a.form.toFixed(1));
  sv("lh",l[0].toFixed(2));sv("la",l[1].toFixed(2));
- FH=h.fat;FA=a.fat;PROV=g.x;CTXD={h:h,a:a};EH=h.elo;EA=a.elo;
+ FH=h.fat;FA=a.fat;PROV=g.x;CTXD={h:h,a:a,ha:g.h,aa:g.a,ko:g.t};EH=h.elo;EA=a.elo;
  function box(t,i){return"<p><b>"+esc(t)+"</b>: "+(i.rank?i.rank+ordn(i.rank)+" on ":"")+i.pts+" pts from "+i.gp+" games. Last results: "+(esc(i.lines.join("; "))||"none in the data")+". Next: "+esc(i.next)+"."+(i.flags.length?' <span class="bad">Flag: '+i.flags.join("; ")+".</span>":"")+"</p>"}
  var mt=META[g.x[3]],res="";
  if(mt&&mt.s=="FINISHED"&&mt.hs!=null){var r0=mfor(g.k,g.h,g.a,g.t).r,e=evalGame(r0,mt.hs,mt.as);
   res="<p><b>Final score: "+esc(h.name)+" "+mt.hs+" – "+mt.as+" "+esc(a.name)+".</b> Model before the game: "+esc(r0.side)+" "+pc(r0.top)+"% "+mark(e.res)+" · Double chance "+esc(r0.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+(r0.bt>=0.5?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+(r0.o25>=0.5?"Yes":"No")+" "+mark(e.ov)+"</p>"}
  else if(mt&&(mt.s=="IN_PLAY"||mt.s=="PAUSED"))res="<p><b>In play: "+esc(h.name)+" "+(mt.hs==null?0:mt.hs)+" – "+(mt.as==null?0:mt.as)+" "+esc(a.name)+".</b> The Live card has in-play chances.</p>";
  ctx='<div class="ctx">'+res+box(h.name,h)+box(a.name,a)+"</div>";
- run()
+ run();showTab("analysis")
 }
 function run(){
  var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;LASTR={r:r,hn:hn,an:an};
@@ -263,8 +283,8 @@ function run(){
  function row(n,p,hi,lo){return"<tr><td>"+n+'</td><td class="n">'+pc(p)+"%</td><td>"+tag(p,hi,lo)+"</td></tr>"}
  var pv=PROV&&(PROV[0]+PROV[1]+PROV[2])>0?'<p class="note">Data provider’s own model: '+esc(hn)+" "+Math.round(PROV[0])+"%, draw "+Math.round(PROV[1])+"%, "+esc(an)+" "+Math.round(PROV[2])+"%. Where it and this model agree, the call is sturdier.</p>":"";
  last={t:Date.now(),d:document.getElementById("dt").value,l:LK?D[LK].n:"Manual",m:hn+" v "+an,p:r.side,h:pc(h),x:pc(d),a:pc(a),dc:r.dc[0],bt:pc(r.bt),o:pc(r.o25)};
- var o=document.getElementById("out");o.hidden=false;
- o.innerHTML='<section class="card"><h2>'+esc(hn)+" v "+esc(an)+"</h2>"+ctx
+ var o=document.getElementById("out");o.hidden=false;document.getElementById("anh").hidden=true;
+ o.innerHTML='<section class="card"><h2>'+esc(hn)+" v "+esc(an)+"</h2>"+ctx+sbs()
  +'<div class="strip" role="img" aria-label="Win probabilities"><div class="h" style="width:'+h*100+'%">'+pc(h)+'%</div><div class="d" style="width:'+d*100+'%">'+pc(d)+'%</div><div class="a" style="width:'+a*100+'%">'+pc(a)+"%</div></div>"
  +'<div class="legend"><span>'+esc(hn)+"</span><span>Draw</span><span>"+esc(an)+"</span></div>"
  +"<table><tr><th>Market</th><th>Chance</th><th>Read</th></tr>"
@@ -284,6 +304,7 @@ function summary(){
  var html="<table><tr><th>League</th><th>Games</th><th>Home</th><th>Draw</th><th>Away</th><th>Strong leans</th><th>GG lean</th><th>Over 2.5 lean</th><th>Finished: called right</th></tr>";
  function cells(c){return'<td class="n">'+c.n+'</td><td class="n">'+c.H+'</td><td class="n">'+c.D+'</td><td class="n">'+c.A+'</td><td class="n">'+c.s+'</td><td class="n">'+c.gg+'</td><td class="n">'+c.ov+'</td><td class="n">'+(c.fin?c.hit+"/"+c.fin:"-")+"</td>"}
  Object.keys(D).forEach(function(k){
+  if(LGF!="all"&&k!=LGF)return;
   var c={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,fin:0,hit:0},best=[];
   FX[k].filter(function(g){return!day||ld(g.t)==d}).forEach(function(g){
    var md=mfor(k,g.h,g.a,g.t),r=md.r,mt=META[g.x[3]];
@@ -326,7 +347,8 @@ function planOpts(sel){return PLANS.map(function(q){return'<option value="'+esc(
 function payBox(id){var q=PLN[id]||PLANS[0];if(!q)return"";return"<b>Pay "+money(q.price)+" for the "+esc(q.name)+" plan</b><ol><li>Open M-Pesa and choose Pochi la Biashara.</li><li>Pay "+money(q.price)+" to <b>+254 726 960 303</b>.</li><li>Enter the M-Pesa confirmation code from your SMS below.</li><li>The developer checks the payment and approves it. "+(q.perm?"Your access never expires.":"Your time starts the first time you log in after approval.")+"</li></ol>"}
 function left(ms){var h=Math.floor(ms/36e5);return h<48?(h<1?"less than an hour":h+" hour"+(h==1?"":"s"))+" left":Math.floor(h/24)+" days left"}
 function planLine(u){if(u.role=="admin")return"Developer";if(u.lifetime)return"Permanent member (never expires)";if(u.active)return esc(planName(u.plan))+" plan · expires "+esc(new Date(u.expires).toLocaleString())+" ("+left(u.expires-Date.now())+")";return u.expires?"Your "+esc(planName(u.plan))+" plan ended "+esc(new Date(u.expires).toLocaleString()):"No active plan"}
-function renderAcct(offline){
+function renderAcct(offline){renderAcct0(offline);renderTabs()}
+function renderAcct0(offline){
  var b=document.getElementById("acctBody");
  if(offline){b.innerHTML='<p class="bad" style="margin:0">The sign-in server is not connected. Finish the Cloudflare setup in README.txt (D1 database and the ADMIN settings), then reload.</p>';return}
  if(ME){var u=ME,exp=u.role=="user"&&!u.active;
@@ -375,14 +397,14 @@ async function enter(){
  renderAcct();
  if(ME.role=="user"&&!ME.active){document.getElementById("app").hidden=true;return}
  var r=await api("data");if(r.ok&&r.j&&typeof r.j=="object"){D=r.j;build()}
- document.getElementById("app").hidden=false;SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel()
+ document.getElementById("app").hidden=false;var h0=(location.hash||"").slice(1);if(TABS.some(function(t){return t[0]==h0})&&(h0!="admin"||ME.role=="admin"))TAB=h0;renderTabs();SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel();if(TAB=="leagues")renderLeagues()
 }
 async function loadSaves(){var r=await api("saves");saves=r.ok&&r.j.items?r.j.items:[];renderMine()}
 async function saveLast(){
  var m=document.getElementById("svm");if(!last)return;
  var r=await api("save",last);m.textContent=r.ok?"Saved to your account.":"Could not save. Log in again.";if(r.ok)loadSaves()
 }
-function renderMine(){
+function renderMine(){renderTabs();
  var b=document.getElementById("mine");
  if(!saves.length){b.textContent="Run a prediction, then choose Save.";return}
  var h="<table><tr><th>Date</th><th>Match</th><th>Pick</th><th>H / D / A</th><th>Double chance</th><th>GG</th><th>O2.5</th><th></th></tr>";
@@ -486,16 +508,16 @@ function finRow(g,T){
  if(g.k&&g.ha){var md=mfor(g.k,g.ha,g.ba,g.ko),r=md.r,e=evalGame(r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++;
   h+="<p style='margin:6px 0 0;font-size:14px'>Model before the game: <b>"+esc(r.side)+"</b> "+pc(r.top)+"% "+mark(e.res)+" · Double chance "+esc(r.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+((r.bt>=0.5)?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+((r.o25>=0.5)?"Yes":"No")+" "+mark(e.ov)+"</p>"}
  return h+"</div>"}
-async function loadLive(){var r=await api("live");if(r.ok&&r.j&&r.j.matches){LIVE=r.j;LERR="";if(DYN){var cs=[],add=false;r.j.matches.forEach(function(m){if(m.c&&cs.indexOf(m.c)<0&&(m.s=="IN_PLAY"||m.s=="PAUSED"||m.s=="FINISHED"))cs.push(m.c)});for(var i=0;i<cs.length;i++){if(!D[cs[i]]&&await ensureSeason(cs[i]))add=true}if(add)build()}}else{LIVE=null;LERR=(r.j&&r.j.error)||"error"}renderLive()}
+async function loadLive(){var r=await api("live");if(r.ok&&r.j&&r.j.matches){LIVE=r.j;LERR="";LIVEN=r.j.matches.filter(function(m){return m.s=="IN_PLAY"||m.s=="PAUSED"}).length;if(DYN){var cs=[],add=false;r.j.matches.forEach(function(m){if(m.c&&cs.indexOf(m.c)<0&&(m.s=="IN_PLAY"||m.s=="PAUSED"||m.s=="FINISHED"))cs.push(m.c)});for(var i=0;i<cs.length;i++){if(!D[cs[i]]&&await ensureSeason(cs[i]))add=true}if(add)build()}}else{LIVE=null;LERR=(r.j&&r.j.error)||"error";LIVEN=0}renderLive();renderTabs()}
 function renderLive(){
  var b=document.getElementById("liveBody"),h="",T={n:0,res:0,dc:0,bt:0,ov:0},now=Date.now();
  if(LIVE){h+='<p class="mid" style="margin:0">Updated '+ht(new Date(LIVE.at))+(LIVE.stale?" (source busy, showing older data)":"")+'. Refreshes every minute while this page is open. On the free data plan, scores can be delayed.</p>';
-  var lv=LIVE.matches.filter(function(m){return m.s=="IN_PLAY"||m.s=="PAUSED"}).sort(function(a,c){return new Date(a.t)-new Date(c.t)});
+  var lv=LIVE.matches.filter(function(m){return(m.s=="IN_PLAY"||m.s=="PAUSED")&&inLG(m)}).sort(function(a,c){return new Date(a.t)-new Date(c.t)});
   h+="<h2 style='margin-top:14px'>Live now</h2>"+(lv.length?lv.map(liveRow).join(""):"<p class='mid'>No games in play right now.</p>");
-  var fin=LIVE.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&now-new Date(m.t)<1.5*864e5}).sort(function(a,c){return new Date(c.t)-new Date(a.t)});
+  var fin=LIVE.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&now-new Date(m.t)<1.5*864e5&&inLG(m)}).sort(function(a,c){return new Date(c.t)-new Date(a.t)});
   h+="<h2 style='margin-top:14px'>Concluded games</h2>"+(fin.length?fin.map(function(m){var tm=teamsOf(m);return finRow({cn:m.cn,h:m.h,a:m.a,hs:m.hs,as:m.as,k:tm&&tm.k,ha:tm&&tm.a,ba:tm&&tm.b,ko:new Date(m.t),when:new Date(m.t).toLocaleString()},T)}).join(""):"<p class='mid'>No finished games in the last 36 hours.</p>")}
  else{h+='<p class="note" style="margin-top:0">'+(LERR=="no_key"?"The live feed is not connected yet. Add FOOTBALL_DATA_KEY in Cloudflare (see README.txt). Meanwhile this shows how the model scored the finished games saved in the data.":LERR=="rate"?"The data source is busy. Try again in a minute. Showing saved results.":"Live data is not available right now. Showing saved results.")+"</p>";
-  var all=[];Object.keys(D).forEach(function(k){R[k].forEach(function(g){all.push({cn:D[k].n,h:D[k].t[g.h][0],a:D[k].t[g.a][0],hs:g.x[0],as:g.x[1],k:k,ha:g.h,ba:g.a,ko:g.t,when:g.t.toLocaleString()})})});
+  var all=[];Object.keys(D).forEach(function(k){if(LGF!="all"&&k!=LGF)return;R[k].forEach(function(g){all.push({cn:D[k].n,h:D[k].t[g.h][0],a:D[k].t[g.a][0],hs:g.x[0],as:g.x[1],k:k,ha:g.h,ba:g.a,ko:g.t,when:g.t.toLocaleString()})})});
   all.sort(function(a,c){return c.ko-a.ko});
   var shown=all.slice(0,6).map(function(g){return finRow(g,{n:0,res:0,dc:0,bt:0,ov:0})}).join("");
   all.forEach(function(g){var e=evalGame(mfor(g.k,g.ha,g.ba,g.ko).r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++});
@@ -563,7 +585,7 @@ function tierOf(p,a,b){return p>=a?["Banker","good"]:p>=b?["Strong","mid"]:["Goo
 function renderPicks(){
  var box=document.getElementById("picksBody");if(!box)return;
  var d=document.getElementById("dt").value,L=STR[document.getElementById("pk").value]||STR.bal,dc=[],w=[],bt=[],thin=0,n=0;
- ALL.filter(function(g){return ld(g.t)==d}).forEach(function(g){
+ ALL.filter(function(g){return ld(g.t)==d&&(LGF=="all"||g.k==LGF)}).forEach(function(g){
   var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
   var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h.name,A=md.a.name,tag=ht(g.t)+" · "+H+" v "+A,lg=D[g.k].n;n++;
   if(Math.min(md.h.n,md.a.n)<4&&!(md.h.elo&&md.a.elo)){thin++;return}
@@ -600,6 +622,71 @@ async function askAI(){
  var cls=j.stance=="agree"?"good":j.stance=="disagree"?"bad":"mid",lab=j.stance=="agree"?"Claude agrees":j.stance=="disagree"?"Claude disagrees":"Claude says be careful";
  b.innerHTML='<div class="lvrow"><span class="tag '+cls+'">'+lab+'</span> <span class="mid">confidence: '+esc(j.confidence)+(j.cached?" · saved answer":"")+'</span><p style="margin:8px 0 0">'+esc(j.summary)+"</p>"+(j.risks&&j.risks.length?"<ul style='margin:6px 0 0 18px;padding:0'>"+j.risks.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul>":"")+'<p class="mid" style="margin:8px 0 0;font-size:13px">AI commentary on the model’s numbers, not a guarantee. Claude cannot see line-ups or injuries unless you enter them.</p></div>'
 }
+// Tabs, filters, league analysis and side-by-side match analysis
+var TAB="games",LGF="all",STF="all",QF="",LIVEN=0;
+var TABS=[["games","Games"],["picks","Picks"],["live","Live"],["analysis","Analysis"],["leagues","Leagues"],["record","Record"],["saved","Saved"],["account","Account"],["admin","Admin"]];
+function tabMode(){return!!(ME&&(ME.role=="admin"||ME.active))}
+function renderTabs(){
+ var nav=document.getElementById("tabs"),fb=document.getElementById("fbar");
+ if(!tabMode()){nav.hidden=true;fb.hidden=true;document.querySelectorAll("[data-tab]").forEach(function(x){x.classList.remove("off")});return}
+ nav.hidden=false;
+ nav.innerHTML=TABS.filter(function(t){return t[0]!="admin"||ME.role=="admin"}).map(function(t){var lab=t[1]+(t[0]=="live"&&LIVEN?" ("+LIVEN+")":"")+(t[0]=="saved"&&saves.length?" ("+saves.length+")":"");return'<button type="button" class="alt" role="tab" data-t="'+t[0]+'" aria-selected="'+(t[0]==TAB)+'">'+esc(lab)+"</button>"}).join("");
+ nav.querySelectorAll("button").forEach(function(x){x.onclick=function(){showTab(x.dataset.t)}});
+ document.querySelectorAll("[data-tab]").forEach(function(x){x.classList.toggle("off",x.dataset.tab!=TAB)});
+ var g=TAB=="games",pk=TAB=="picks";
+ fb.hidden=!(g||pk||TAB=="live"||TAB=="leagues");
+ document.getElementById("fdw").hidden=!(g||pk);document.getElementById("fsw").hidden=!g;document.getElementById("fqw").hidden=!g;
+}
+function showTab(t){TAB=t;renderTabs();try{history.replaceState(null,"","#"+t)}catch(e){}if(t=="leagues")renderLeagues();if(window.scrollTo)window.scrollTo(0,0)}
+function lgOpts(){var sel=document.getElementById("fl"),ks=Object.keys(D).filter(function(k){return D[k]&&D[k].n}).sort(function(a,b){return D[a].n<D[b].n?-1:1});
+ sel.innerHTML='<option value="all">All leagues</option>'+ks.map(function(k){return'<option value="'+esc(k)+'">'+esc(D[k].n)+"</option>"}).join("");
+ if(LGF!="all"&&!D[LGF])LGF="all";sel.value=LGF}
+function gStatus(g){var mt=META[g.x[3]];return mt?(mt.s=="FINISHED"?"fin":(mt.s=="IN_PLAY"||mt.s=="PAUSED")?"live":"up"):"up"}
+function gFilter(g){if(LGF!="all"&&g.k!=LGF)return false;if(STF!="all"&&gStatus(g)!=STF)return false;
+ if(QF){var q=QF.toLowerCase();if(((D[g.k].t[g.h]||["?"])[0]+" "+(D[g.k].t[g.a]||["?"])[0]).toLowerCase().indexOf(q)<0)return false}return true}
+function inLG(m){if(LGF=="all")return true;var k=D[m.c]?m.c:CODE[m.c];return k==LGF}
+function refreshViews(){list();renderLive();if(TAB=="leagues")renderLeagues()}
+// side-by-side comparison and earlier meetings, shown under the match analysis
+function sbs(){
+ if(!CTXD||!LK||!D[LK])return"";var h=CTXD.h,a=CTXD.a;
+ function f5(i){return i.lines.slice(-5).map(function(x){return x.charAt(0)}).join(" ")||"-"}
+ function ppg(i){return i.gp?(i.pts/i.gp).toFixed(2):"-"}
+ function gpg(x,i){return i.n?(x/i.n).toFixed(2):"-"}
+ var rows=[["League position",h.rank||"-",a.rank||"-"],["Played",h.gp,a.gp],["Points per game",ppg(h),ppg(a)],["Goals scored per game",gpg(h.gf,h),gpg(a.gf,a)],["Goals conceded per game",gpg(h.ga,h),gpg(a.ga,a)],["Last results (oldest first)",f5(h),f5(a)],["Rating (if known)",h.elo||"-",a.elo||"-"],["Rest / fixture flags",h.flags.length?h.flags.join("; "):"none",a.flags.length?a.flags.join("; "):"none"]];
+ var meet=R[LK].filter(function(g){return g.t<CTXD.ko&&((g.h==CTXD.ha&&g.a==CTXD.aa)||(g.h==CTXD.aa&&g.a==CTXD.ha))}).sort(function(x,y){return x.t-y.t}).map(function(g){return esc((D[LK].t[g.h]||["?"])[0])+" "+g.x[0]+"–"+g.x[1]+" "+esc((D[LK].t[g.a]||["?"])[0])+" ("+esc(ld(g.t))+")"});
+ return"<h3 style='margin:12px 0 4px'>Side by side</h3><div class='scroll'><table><tr><th></th><th>"+esc(h.name)+"</th><th>"+esc(a.name)+"</th></tr>"+rows.map(function(r){return"<tr><td>"+r[0]+"</td><td class='n'>"+esc(r[1])+"</td><td class='n'>"+esc(r[2])+"</td></tr>"}).join("")+"</table></div><p style='margin:8px 0 0;font-size:14px'><b>Earlier meetings in the loaded results:</b> "+(meet.length?meet.join("; "):"none")+".</p>"}
+// league analysis
+function pctf(x,n){return n?Math.round(100*x/n)+"%":"-"}
+function lgStats(k){
+ var T={},n=0,H=0,Dw=0,A=0,bt=0,ov=0,goals=0;
+ function tm(id){return T[id]||(T[id]={id:id,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,f:[],bt:0,ov:0,cs:0})}
+ R[k].slice().sort(function(a,b){return a.t-b.t}).forEach(function(g){var x=g.x[0],y=g.x[1],a=tm(g.h),b=tm(g.a);n++;goals+=x+y;if(x>y)H++;else if(x==y)Dw++;else A++;if(x>0&&y>0){bt++;a.bt++;b.bt++}if(x+y>2){ov++;a.ov++;b.ov++}
+  a.p++;b.p++;a.gf+=x;a.ga+=y;b.gf+=y;b.ga+=x;if(y==0)a.cs++;if(x==0)b.cs++;
+  if(x>y){a.w++;b.l++;a.pts+=3;a.f.push("W");b.f.push("L")}else if(x==y){a.d++;b.d++;a.pts++;b.pts++;a.f.push("D");b.f.push("D")}else{b.w++;a.l++;b.pts+=3;a.f.push("L");b.f.push("W")}});
+ var rows=Object.keys(T).map(function(id){return T[id]}).sort(function(a,b){return b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf});
+ return{n:n,H:H,D:Dw,A:A,bt:bt,ov:ov,goals:goals,rows:rows}}
+function renderLeagues(){
+ var b=document.getElementById("lgsBody");if(!b)return;
+ var keys=Object.keys(D).filter(function(k){return R[k]&&R[k].length});
+ if(!keys.length){b.innerHTML="<p class='mid'>No results are loaded yet, so there is nothing to analyse.</p>";return}
+ if(LGF=="all"||!R[LGF]||!R[LGF].length){
+  b.innerHTML="<p class='mid' style='margin:0 0 6px'>Overview of every loaded league. Choose one in the League filter above for its table, trends and how the model has done there.</p><div class='scroll'><table><tr><th>League</th><th>Games</th><th>Goals/game</th><th>Home</th><th>Draw</th><th>Away</th><th>BTTS</th><th>Over 2.5</th></tr>"+keys.map(function(k){var s=lgStats(k);return"<tr><td>"+esc(D[k].n)+"</td><td class='n'>"+s.n+"</td><td class='n'>"+(s.goals/s.n).toFixed(2)+"</td><td class='n'>"+pctf(s.H,s.n)+"</td><td class='n'>"+pctf(s.D,s.n)+"</td><td class='n'>"+pctf(s.A,s.n)+"</td><td class='n'>"+pctf(s.bt,s.n)+"</td><td class='n'>"+pctf(s.ov,s.n)+"</td></tr>"}).join("")+"</table></div>";return}
+ var k=LGF,s=lgStats(k);function nm(id){return(D[k].t[id]||["?"])[0]}
+ function tile(t,v){return"<div class='lvrow'><span class='mid'>"+t+"</span><br><span class='xg'>"+v+"</span></div>"}
+ var h="<h3 style='margin:0'>"+esc(D[k].n)+"</h3><div class='tiles'>"+tile("Games played",s.n)+tile("Goals per game",(s.goals/s.n).toFixed(2))+tile("Home wins",pctf(s.H,s.n))+tile("Draws",pctf(s.D,s.n))+tile("Away wins",pctf(s.A,s.n))+tile("Both teams scored",pctf(s.bt,s.n))+tile("Over 2.5 goals",pctf(s.ov,s.n))+"</div>";
+ h+="<h3 style='margin:12px 0 4px'>Table (from the loaded results)</h3><div class='scroll'><table><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Last 5</th></tr>"+s.rows.slice(0,40).map(function(r,i){return"<tr><td class='n'>"+(i+1)+"</td><td>"+esc(nm(r.id))+"</td><td class='n'>"+r.p+"</td><td class='n'>"+r.w+"</td><td class='n'>"+r.d+"</td><td class='n'>"+r.l+"</td><td class='n'>"+r.gf+"</td><td class='n'>"+r.ga+"</td><td class='n'>"+(r.gf-r.ga)+"</td><td class='n'><b>"+r.pts+"</b></td><td>"+r.f.slice(-5).join(" ")+"</td></tr>"}).join("")+"</table></div>";
+ function top(label,fn,minP,fmt,desc){var a=s.rows.filter(function(r){return r.p>=minP}).sort(function(x,y){return desc?fn(y)-fn(x):fn(x)-fn(y)}).slice(0,3);return a.length?"<p style='margin:4px 0;font-size:14px'><b>"+label+":</b> "+a.map(function(r){return esc(nm(r.id))+" ("+fmt(r)+")"}).join(", ")+"</p>":""}
+ h+="<h3 style='margin:12px 0 4px'>Trends</h3>"+top("Best attack",function(r){return r.gf/r.p},3,function(r){return(r.gf/r.p).toFixed(2)+" goals a game"},true)+top("Best defence",function(r){return r.ga/r.p},3,function(r){return(r.ga/r.p).toFixed(2)+" conceded a game"},false)+top("Both teams score most often",function(r){return r.bt/r.p},4,function(r){return Math.round(100*r.bt/r.p)+"%"},true)+top("Over 2.5 goals most often",function(r){return r.ov/r.p},4,function(r){return Math.round(100*r.ov/r.p)+"%"},true)+top("Most clean sheets",function(r){return r.cs/r.p},4,function(r){return r.cs+" in "+r.p},true);
+ // how the model has done in this league (each game predicted with data from before kick-off)
+ var past=R[k].slice().sort(function(a,b){return b.t-a.t}).slice(0,40),T={n:0,res:0,dc:0,bt:0,ov:0};
+ past.forEach(function(g){try{var e=evalGame(mfor(k,g.h,g.a,g.t).r,g.x[0],g.x[1]);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++}catch(x){}});
+ h+="<h3 style='margin:12px 0 4px'>How the model has done here</h3>"+(T.n>=5?"<p style='margin:0;font-size:14px'>Last "+T.n+" finished games, each predicted with only the data from before kick-off: result right "+pctf(T.res,T.n)+" · double chance "+pctf(T.dc,T.n)+" · both teams to score "+pctf(T.bt,T.n)+" · over/under 2.5 "+pctf(T.ov,T.n)+". Small samples are noisy.</p>":"<p class='mid' style='margin:0'>Not enough finished games yet.</p>");
+ h+="<p><button class='alt' id='lgg'>See this league’s games</button></p>";
+ b.innerHTML=h;var gb=document.getElementById("lgg");if(gb)gb.onclick=function(){showTab("games")}
+}
+document.getElementById("fl").onchange=function(){LGF=this.value;refreshViews()};
+document.getElementById("fs").onchange=function(){STF=this.value;list()};
+document.getElementById("fq").oninput=function(){QF=this.value.trim();list()};
 document.getElementById("go").onclick=run;
 document.getElementById("hb").onclick=runHistory;
 document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;EH=null;EA=null;CTXD=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
