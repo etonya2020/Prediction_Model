@@ -150,8 +150,13 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 
 <section class="card" id="hist" data-tab="record">
  <h2>Past results and model record</h2>
- <label for="hd">Look back</label>
- <select id="hd"><option value="3">3 days</option><option value="7" selected>7 days</option></select>
+ <div class="grid">
+  <div><label for="hf">From</label><input type="date" id="hf"></div>
+  <div><label for="ht">To</label><input type="date" id="ht"></div>
+ </div>
+ <p style="margin:10px 0 0"><button class="alt sm" id="hp0">Today</button> <button class="alt sm" id="hp1">Yesterday</button> <button class="alt sm" id="hp7">Last 7 days</button> <button class="alt sm" id="hp30">Last 30 days</button></p>
+ <label for="hs">Show games</label>
+ <select id="hs"><option value="all">All games</option><option value="hit">Result called right</option><option value="miss">Result called wrong</option></select>
  <p><button id="hb">Check how predictions did</button></p>
  <div id="histBody" class="scroll"></div>
 </section>
@@ -555,30 +560,54 @@ async function loadDay(){
  build();clearTimeout(RETRY);if(failed.length)RETRY=setTimeout(loadDay,65000);
  list()
 }
+var HM=null,HLOAD=false;
+function histDefaults(){var f=document.getElementById("hf"),t=document.getElementById("ht");if(!t.value)t.value=ld(new Date());if(!f.value)f.value=ld(new Date(Date.now()-6*864e5))}
+function histPreset(daysBack,single){var t=ld(new Date(single?Date.now()-daysBack*864e5:Date.now())),f=single?t:ld(new Date(Date.now()-daysBack*864e5));document.getElementById("hf").value=f;document.getElementById("ht").value=t;runHistory()}
 async function runHistory(){
- var b=document.getElementById("histBody"),n=+document.getElementById("hd").value;b.textContent="Loading…";
- var r=await api("matches?from="+ld(new Date(Date.now()-n*864e5))+"&to="+ld(new Date()));
- if(!r.ok||!r.j||!r.j.matches){var e=r.j&&r.j.error;b.textContent=e=="no_key"?"Connect the data feed first (FOOTBALL_DATA_KEY, see README).":"Could not load past games right now. Try again in a minute.";return}
- var ms=r.j.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&m.as!=null&&m.h&&m.a&&m.c}),codes=[],skipped=0;
- useDyn();
- ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
+ var b=document.getElementById("histBody"),today=ld(new Date());histDefaults();
+ var f=document.getElementById("hf").value,t=document.getElementById("ht").value;
+ if(f>t){var x=f;f=t;t=x}
+ if(t>today)t=today;if(f>t)f=t;
+ document.getElementById("hf").value=f;document.getElementById("ht").value=t;
+ if((Date.parse(t)-Date.parse(f))/864e5>59){b.textContent="Please choose 60 days or fewer at a time.";return}
+ b.textContent="Loading…";
+ var all=[],failed=0,s0=addDays(f,-1),end=addDays(t,1);
+ while(s0<=end){var e0=addDays(s0,9);if(e0>end)e0=end;
+  var r=await api("matches?from="+s0+"&to="+e0);
+  if(!r.ok||!r.j||!r.j.matches){if(r.j&&r.j.error=="no_key"){b.textContent="Connect the data feed first (FOOTBALL_DATA_KEY, see README).";return}failed++}
+  else all=all.concat(r.j.matches);
+  s0=addDays(e0,1)}
+ if(!all.length&&failed){b.textContent="Could not load past games right now. Try again in a minute.";return}
+ var seen={},ms=all.filter(function(m){if(seen[m.id])return false;seen[m.id]=1;var d=ld(new Date(m.t));return d>=f&&d<=t&&m.s=="FINISHED"&&m.hs!=null&&m.as!=null&&m.h&&m.a&&m.c}),codes=[];
+ useDyn();ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
  for(var i=0;i<codes.length;i++){if(!D[codes[i]])await ensureSeason(codes[i])}
- build();
- var rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0};REL={dc:[],w:[],b:[]};
- ms.sort(function(x,y){return new Date(y.t)-new Date(x.t)}).forEach(function(m){
-  var k=m.c;if(!D[k]){skipped++;return}
+ build();HM={f:f,t:t,ms:ms,failed:failed};drawHistory()
+}
+function drawHistory(){
+ var b=document.getElementById("histBody");if(!HM)return;
+ var show=document.getElementById("hs").value||"all",rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0},days={},skipped=0;REL={dc:[],w:[],b:[]};
+ var ms=HM.ms.filter(function(m){return LGF=="all"||m.c==LGF}).sort(function(x,y){return new Date(y.t)-new Date(x.t)});
+ ms.forEach(function(m){var k=m.c;if(!D[k]){skipped++;return}
   if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];
-  var md=mfor(k,String(m.h),String(m.a),new Date(m.t)),e=evalGame(md.r,m.hs,m.as),q=L[k]||(L[k]={n:D[k].n,t:{n:0,res:0,dc:0,bt:0,ov:0}});
-  rel(md.r,m.hs,m.as);[q.t,A].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
-  rows.push("<tr><td>"+esc(new Date(m.t).toLocaleDateString())+"</td><td>"+esc(m.hn)+" "+m.hs+"–"+m.as+" "+esc(m.an)+"<br><span class='mid'>"+esc(D[k].n)+"</span></td><td>"+esc(md.r.side)+" "+pc(md.r.top)+"%</td><td>"+mark(e.res)+"</td><td>"+mark(e.dc)+"</td><td>"+mark(e.bt)+"</td><td>"+mark(e.ov)+"</td></tr>")});
+  var md=mfor(k,String(m.h),String(m.a),new Date(m.t)),e=evalGame(md.r,m.hs,m.as),dk=ld(new Date(m.t)),q=L[k]||(L[k]={n:D[k].n,t:{n:0,res:0,dc:0,bt:0,ov:0}}),dd=days[dk]||(days[dk]={n:0,res:0,dc:0,bt:0,ov:0});
+  rel(md.r,m.hs,m.as);[q.t,A,dd].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
+  if((show=="hit"&&!e.res)||(show=="miss"&&e.res))return;
+  rows.push("<tr class='gr'><td>"+esc(new Date(m.t).toLocaleDateString())+"</td><td>"+esc(m.hn)+" "+m.hs+"–"+m.as+" "+esc(m.an)+"<br><span class='mid'>"+esc(D[k].n)+"</span></td><td>"+esc(md.r.side)+" "+pc(md.r.top)+"%</td><td>"+mark(e.res)+"</td><td>"+mark(e.dc)+"</td><td>"+mark(e.bt)+"</td><td>"+mark(e.ov)+"</td></tr>")});
  function pct(x,n){return n?Math.round(100*x/n)+"% ("+x+"/"+n+")":"-"}
  function line(nm,o){return"<tr><td>"+esc(nm)+"</td><td class='n'>"+o.n+"</td><td class='n'>"+pct(o.res,o.n)+"</td><td class='n'>"+pct(o.dc,o.n)+"</td><td class='n'>"+pct(o.bt,o.n)+"</td><td class='n'>"+pct(o.ov,o.n)+"</td></tr>"}
- if(!A.n){b.textContent="No finished games with data in this period.";return}
- b.innerHTML="<table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+Object.keys(L).map(function(k){return line(L[k].n,L[k].t)}).join("")+line("All leagues",A)+"</table>"
- +relHtml()+'<h2 style="margin-top:16px">Game by game</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>'+rows.slice(0,100).join("")+"</table>"
- +'<p class="note">Each game is predicted using only results from before kick-off, so this is an honest record, not hindsight. ✓ = the model called it, ✗ = it did not.'+(skipped?" "+skipped+" games skipped (league data not loaded).":"")+" Judge the model over hundreds of games, not a few days.</p>";
- list()
+ var head="<p class='mid' style='margin:0 0 6px'>"+esc(HM.f)+" to "+esc(HM.t)+(LGF!="all"&&D[LGF]?" · "+esc(D[LGF].n):" · all leagues")+" · "+A.n+" finished game"+(A.n==1?"":"s")+" predicted with only the data from before kick-off.</p>";
+ if(!A.n){b.innerHTML=head+"<p class='note'>No finished games with data in this period"+(LGF!="all"?" for this league. Try All leagues":"")+".</p>";return}
+ var dk=Object.keys(days).sort().reverse();
+ b.innerHTML=head+"<table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+Object.keys(L).map(function(k){return line(L[k].n,L[k].t)}).join("")+line("All leagues",A)+"</table>"
+ +"<h3 style='margin:12px 0 4px'>Day by day</h3><table><tr><th>Day</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+dk.map(function(d){return line(d,days[d])}).join("")+"</table>"
+ +relHtml()+"<h2 style='margin-top:16px'>Game by game"+(show=="hit"?" (result called right)":show=="miss"?" (result called wrong)":"")+"</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>"+rows.slice(0,150).join("")+"</table>"+(rows.length>150?"<p class='mid'>Showing the first 150 of "+rows.length+" games. Narrow the dates to see the rest.</p>":"")
+ +'<p class="note">✓ = the model called it, ✗ = it did not. Each game was predicted using only results from before kick-off, so this is an honest record, not hindsight.'+(skipped?" "+skipped+" games skipped (league data not loaded).":"")+(HM.failed?" Some days could not load because the data source was busy, so totals may be incomplete.":"")+" Judge the model over hundreds of games, not a few days.</p>"
 }
+document.getElementById("hs").onchange=drawHistory;
+document.getElementById("hp0").onclick=function(){histPreset(0,true)};
+document.getElementById("hp1").onclick=function(){histPreset(1,true)};
+document.getElementById("hp7").onclick=function(){histPreset(6,false)};
+document.getElementById("hp30").onclick=function(){histPreset(29,false)};
 // Confidence picks, reliability check and the Claude second opinion
 var STR={bal:{dc:70,w:50,b:58},strict:{dc:78,w:58,b:64},vs:{dc:85,w:65,b:70}};
 function tierOf(p,a,b){return p>=a?["Banker","good"]:p>=b?["Strong","mid"]:["Good","mid"]}
@@ -634,10 +663,10 @@ function renderTabs(){
  nav.querySelectorAll("button").forEach(function(x){x.onclick=function(){showTab(x.dataset.t)}});
  document.querySelectorAll("[data-tab]").forEach(function(x){x.classList.toggle("off",x.dataset.tab!=TAB)});
  var g=TAB=="games",pk=TAB=="picks";
- fb.hidden=!(g||pk||TAB=="live"||TAB=="leagues");
+ fb.hidden=!(g||pk||TAB=="live"||TAB=="leagues"||TAB=="record");
  document.getElementById("fdw").hidden=!(g||pk);document.getElementById("fsw").hidden=!g;document.getElementById("fqw").hidden=!g;
 }
-function showTab(t){TAB=t;renderTabs();try{history.replaceState(null,"","#"+t)}catch(e){}if(t=="leagues")renderLeagues();if(window.scrollTo)window.scrollTo(0,0)}
+function showTab(t){TAB=t;renderTabs();try{history.replaceState(null,"","#"+t)}catch(e){}if(t=="leagues")renderLeagues();if(t=="record"){histDefaults();if(!HM&&!HLOAD){HLOAD=true;runHistory()}}if(window.scrollTo)window.scrollTo(0,0)}
 function lgOpts(){var sel=document.getElementById("fl"),ks=Object.keys(D).filter(function(k){return D[k]&&D[k].n}).sort(function(a,b){return D[a].n<D[b].n?-1:1});
  sel.innerHTML='<option value="all">All leagues</option>'+ks.map(function(k){return'<option value="'+esc(k)+'">'+esc(D[k].n)+"</option>"}).join("");
  if(LGF!="all"&&!D[LGF])LGF="all";sel.value=LGF}
@@ -645,7 +674,7 @@ function gStatus(g){var mt=META[g.x[3]];return mt?(mt.s=="FINISHED"?"fin":(mt.s=
 function gFilter(g){if(LGF!="all"&&g.k!=LGF)return false;if(STF!="all"&&gStatus(g)!=STF)return false;
  if(QF){var q=QF.toLowerCase();if(((D[g.k].t[g.h]||["?"])[0]+" "+(D[g.k].t[g.a]||["?"])[0]).toLowerCase().indexOf(q)<0)return false}return true}
 function inLG(m){if(LGF=="all")return true;var k=D[m.c]?m.c:CODE[m.c];return k==LGF}
-function refreshViews(){list();renderLive();if(TAB=="leagues")renderLeagues()}
+function refreshViews(){list();renderLive();if(TAB=="leagues")renderLeagues();if(HM)drawHistory()}
 // side-by-side comparison and earlier meetings, shown under the match analysis
 function sbs(){
  if(!CTXD||!LK||!D[LK])return"";var h=CTXD.h,a=CTXD.a;
