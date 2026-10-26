@@ -120,6 +120,14 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <p class="note">Games load automatically for the date you pick, from the leagues your data feed covers. If the feed is not connected, a saved snapshot is shown instead. Any other league works through the manual match below.</p>
 </section>
 
+<section class="card" id="top10" data-tab="picks">
+ <h2>Top 10 confident picks</h2>
+ <p class="mid" style="margin:0">The model's most confident picks for the chosen day across all leagues (or the league you filtered): double chance (1X, 12, X2), sure wins and both teams to score. One pick per game, spread across leagues and markets. Corners and goalscorers are not included, because the data feed has no corner counts or line-ups.</p>
+ <div class="grid"><div><label for="t10s">Confidence bar</label><select id="t10s"><option value="conf">Confident</option><option value="very">Very confident</option><option value="relaxed">Relaxed</option></select></div></div>
+ <p><button id="t10b">Best 10</button> <button class="alt" id="t10r">Shuffle 10</button> <button class="alt" id="t10c">Copy list</button> <button class="alt" id="t10a">Ask Claude to review</button></p>
+ <div id="t10body"></div><div id="t10ai"></div>
+</section>
+
 <section class="card" id="picks" data-tab="picks">
  <h2>Confidence picks</h2>
  <p class="mid" style="margin:0 0 6px">Double chance, favourite to win and both teams to score for the chosen day. Only the games the model is most sure about.</p>
@@ -265,7 +273,7 @@ function list(){
   b.className="fx";b.setAttribute("aria-pressed","false");
   b.innerHTML="<b>"+ht(g.t)+"</b><span>"+esc(D[g.k].t[g.h][0])+" v "+esc(D[g.k].t[g.a][0])+"</span><small>"+st+"</small>";
   b.onclick=function(){box.querySelectorAll(".fx").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");pick(g)};box.appendChild(b)});
- summary();renderPicks()
+ summary();renderPicks();renderTop10()
 }
 function pick(g){
  var h=info(g.k,g.h,g.t),a=info(g.k,g.a,g.t),l=lgAvg(g.k,g.t);LK=g.k;
@@ -293,7 +301,7 @@ function run(){
  +'<div class="strip" role="img" aria-label="Win probabilities"><div class="h" style="width:'+h*100+'%">'+pc(h)+'%</div><div class="d" style="width:'+d*100+'%">'+pc(d)+'%</div><div class="a" style="width:'+a*100+'%">'+pc(a)+"%</div></div>"
  +'<div class="legend"><span>'+esc(hn)+"</span><span>Draw</span><span>"+esc(an)+"</span></div>"
  +"<table><tr><th>Market</th><th>Chance</th><th>Read</th></tr>"
- +row("Most likely result: "+esc(r.side),r.top,0.55,0.45)+row("Double chance: "+esc(r.dc[0]),r.dc[1],0.80,0.70)
+ +row("Most likely result: "+esc(r.side),r.top,0.55,0.45)+row("1X — "+esc(hn)+" or draw",r.h+r.d,0.80,0.70)+row("12 — either team wins",r.h+r.a,0.80,0.70)+row("X2 — "+esc(an)+" or draw",r.d+r.a,0.80,0.70)
  +row("Both teams to score: Yes",r.bt,0.60,0.52)+row("Both teams to score: No",1-r.bt,0.60,0.52)
  +row("Over 2.5 goals",r.o25,0.60,0.52)+row("Under 2.5 goals",1-r.o25,0.60,0.52)+"</table>"
  +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+pv
@@ -618,14 +626,14 @@ function renderPicks(){
   var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
   var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h.name,A=md.a.name,tag=ht(g.t)+" · "+H+" v "+A,lg=D[g.k].n;n++;
   if(Math.min(md.h.n,md.a.n)<4&&!(md.h.elo&&md.a.elo)){thin++;return}
-  var p1=r.h+r.d,p2=r.d+r.a,dcp=Math.max(p1,p2)*100;
-  if(dcp>=L.dc)dc.push([dcp,tag,(p1>=p2?"1X ("+H+" or draw)":"X2 ("+A+" or draw)"),lg,tierOf(dcp,85,78)]);
+  var p1=r.h+r.d,p2=r.d+r.a,p12=r.h+r.a,dcp=Math.max(p1,p2,p12)*100,dcl=(p12>=p1&&p12>=p2)?"12 (either team wins, no draw)":(p1>=p2?"1X ("+H+" or draw)":"X2 ("+A+" or draw)");
+  if(dcp>=L.dc)dc.push([dcp,tag,dcl,lg,tierOf(dcp,85,78)]);
   if(r.key!="D"&&r.top*100>=L.w)w.push([r.top*100,tag,(r.key=="H"?H:A)+" to win",lg,tierOf(r.top*100,65,58)]);
   var by=r.bt>=0.5,bp=(by?r.bt:1-r.bt)*100;if(bp>=L.b)bt.push([bp,tag,"Both teams to score: "+(by?"Yes":"No"),lg,tierOf(bp,70,64)])});
  function sec(t,arr){arr.sort(function(x,y){return y[0]-x[0]});
   return"<h3 class='lgh' style='grid-column:auto'>"+t+" ("+arr.length+")</h3>"+(arr.length?arr.map(function(x){return"<div class='lvrow'><b>"+esc(x[1])+"</b> <span class='mid'>"+esc(x[3])+"</span><br>"+esc(x[2])+" — <b>"+Math.round(x[0])+"%</b> <span class='tag "+x[4][1]+"'>"+x[4][0]+"</span></div>"}).join(""):"<p class='mid'>No games meet this level.</p>")}
  if(!n){box.innerHTML="<p class='mid'>No upcoming games on this date.</p>";return}
- box.innerHTML=sec("Double chance (1X / X2)",dc)+sec("Favourite to win",w)+sec("Both teams to score",bt)
+ box.innerHTML=sec("Double chance (1X / 12 / X2)",dc)+sec("Favourite to win",w)+sec("Both teams to score",bt)
  +'<p class="note">'+(thin?thin+" game"+(thin>1?"s were":" was")+" left out because a team has too little data yet. ":"")+'Percentages are the model’s own estimates. Check the reliability table under “Past results and model record” to see whether they have held up. Combining many picks into one bet cuts your chance of winning sharply, so only stake what you can afford to lose.</p>'
 }
 function rel(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",p1=r.h+r.d,p2=r.d+r.a;
@@ -716,6 +724,61 @@ function renderLeagues(){
 document.getElementById("fl").onchange=function(){LGF=this.value;refreshViews()};
 document.getElementById("fs").onchange=function(){STF=this.value;list()};
 document.getElementById("fq").oninput=function(){QF=this.value.trim();list()};
+// Top 10 confident picks: double chance (1X / 12 / X2), sure wins and both teams to score, one pick per game
+var T10B={relaxed:{dc:70,w:50,b:58},conf:{dc:78,w:58,b:62},very:{dc:85,w:65,b:70}},T10CAP={dc:5,w:4,b:3},T10=[],T10N={dc:"Double chance",w:"Sure win",b:"Both teams to score"};
+function trend(k,ab,ko){var rs=R[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t<ko}).sort(function(a,b){return a.t-b.t}).slice(-8),o={n:rs.length,bt:0,cs:0,fs:0};
+ rs.forEach(function(g){var f=g.h==ab?g.x[0]:g.x[1],a=g.h==ab?g.x[1]:g.x[0];if(f>0&&a>0)o.bt++;if(a==0)o.cs++;if(f==0)o.fs++});return o}
+function formL(i){return i.lines.slice(-5).map(function(x){return x.charAt(0)}).join("")||"no results yet"}
+function gpg2(x,i){return i.n?(x/i.n).toFixed(1):"-"}
+function t10Cands(){
+ var d=document.getElementById("dt").value,L=T10B[document.getElementById("t10s").value]||T10B.conf,out=[];
+ ALL.filter(function(g){return ld(g.t)==d&&(LGF=="all"||g.k==LGF)}).forEach(function(g){
+  var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
+  var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h,A=md.a;
+  if(Math.min(H.n,A.n)<4&&!(H.elo&&A.elo))return;
+  var th=trend(g.k,g.h,g.t),ta=trend(g.k,g.a,g.t),lo=Math.min(H.n,A.n),flag=H.flags.concat(A.flags),
+   base=function(m,label,p,bar,extra){var c={g:g,md:md,m:m,label:label,p:p,sc:p-bar};
+    c.facts="xG "+r.lh.toFixed(1)+"-"+r.la.toFixed(1)+"; "+H.name+" "+formL(H)+" ("+gpg2(H.gf,H)+" scored, "+gpg2(H.ga,H)+" conceded a game); "+A.name+" "+formL(A)+" ("+gpg2(A.gf,A)+" scored, "+gpg2(A.ga,A)+" conceded a game)";
+    c.sum="Model: "+H.name+" "+pc(r.h)+"% · draw "+pc(r.d)+"% · "+A.name+" "+pc(r.a)+"%, expected goals "+r.lh.toFixed(1)+"–"+r.la.toFixed(1)+". "+H.name+": "+formL(H)+" in the last results, "+gpg2(H.gf,H)+" scored and "+gpg2(H.ga,H)+" conceded a game. "+A.name+": "+formL(A)+", "+gpg2(A.gf,A)+" scored and "+gpg2(A.ga,A)+" conceded a game. "+extra+(flag.length?" Watch: "+flag.join("; ")+".":"")+(lo<6?" Only "+lo+" games of data on one side, so treat with care.":"");return c};
+  var opts=[["1X",r.h+r.d,H.name+" or draw"],["12",r.h+r.a,"either team wins, no draw"],["X2",r.d+r.a,A.name+" or draw"]].sort(function(x,y){return y[1]-x[1]}),bd=opts[0];
+  if(bd[1]*100>=L.dc)out.push(base("dc",bd[0]+" ("+bd[2]+")",bd[1]*100,L.dc,"The pick "+(bd[0]=="1X"?"only fails if "+A.name+" win ("+pc(r.a)+"%).":bd[0]=="X2"?"only fails if "+H.name+" win ("+pc(r.h)+"%).":"only fails on a draw ("+pc(r.d)+"%).")));
+  if(r.key!="D"&&r.top*100>=L.w){var wn=r.key=="H"?H.name:A.name;out.push(base("w",wn+" to win",r.top*100,L.w,"It needs an outright win; a draw or defeat ("+(100-pc(r.top))+"%) loses it."))}
+  var by=r.bt>=0.5,bp=(by?r.bt:1-r.bt)*100;
+  if(bp>=L.b)out.push(base("b","Both teams to score: "+(by?"Yes":"No"),bp,L.b,by?"Both scored in "+th.bt+" of "+th.n+" recent games for "+H.name+" and "+ta.bt+" of "+ta.n+" for "+A.name+".":"Clean sheets in "+th.cs+" of "+th.n+" for "+H.name+" and "+ta.cs+" of "+ta.n+" for "+A.name+"; failed to score in "+th.fs+" and "+ta.fs+" respectively."))});
+ return out}
+function t10Pick(jit){
+ var cands=t10Cands(),lo=Math.min.apply(null,cands.map(function(c){return c.sc}).concat([0])),hi=Math.max.apply(null,cands.map(function(c){return c.sc}).concat([0])),amp=jit?jit*Math.max(5,hi-lo):0,cs=cands.map(function(c){c.k2=c.sc+Math.random()*amp;return c}).sort(function(a,b){return b.k2-a.k2}),chosen=[],used={},mc={dc:0,w:0,b:0},lc={};
+ function take(f){cs.forEach(function(c){if(chosen.length>=10)return;var id=c.g.k+"|"+c.g.h+"|"+c.g.a;if(used[id]||!f(c))return;used[id]=1;chosen.push(c);mc[c.m]++;lc[c.g.k]=(lc[c.g.k]||0)+1})}
+ take(function(c){return mc[c.m]<T10CAP[c.m]&&(lc[c.g.k]||0)<4});
+ take(function(c){return mc[c.m]<T10CAP[c.m]});
+ take(function(){return true});
+ return chosen.sort(function(a,b){return b.sc-a.sc})}
+function renderTop10(){var box=document.getElementById("t10body");if(!box)return;T10=t10Pick(0);t10Draw()}
+function t10Draw(){
+ var box=document.getElementById("t10body"),d=document.getElementById("dt").value;
+ if(!T10.length){box.innerHTML="<p class='note'>No game meets this confidence bar on "+esc(d)+". The list is never padded with weaker picks. Try the Relaxed bar, another date, or all leagues.</p>";return}
+ var cnt={dc:0,w:0,b:0},sum=0,all=1,lows=T10[0];T10.forEach(function(c){cnt[c.m]++;sum+=c.p;all*=c.p/100;if(c.p<lows.p)lows=c});
+ var h="<div class='tiles'><div class='lvrow'><span class='mid'>Picks</span><br><span class='xg'>"+T10.length+"</span><br><span class='mid'>"+cnt.dc+" double chance · "+cnt.w+" sure wins · "+cnt.b+" BTTS</span></div><div class='lvrow'><span class='mid'>Average confidence</span><br><span class='xg'>"+Math.round(sum/T10.length)+"%</span></div><div class='lvrow'><span class='mid'>Expected to land</span><br><span class='xg'>"+(sum/100).toFixed(1)+" of "+T10.length+"</span></div><div class='lvrow'><span class='mid'>Chance all land</span><br><span class='xg'>"+(all*100<1?"under 1":Math.round(all*100))+"%</span></div></div>";
+ h+="<p class='note' style='margin-top:0'>"+(T10.length<10?"Only "+T10.length+" games meet this bar, so I am not padding the list. ":"")+"If the percentages are accurate you would expect about "+(sum/100).toFixed(1)+" of these "+T10.length+" to win, and the chance that every one wins is only about "+(all*100<1?"under 1":Math.round(all*100))+"% (assuming the games are independent). Shakiest pick: "+esc(lows.md.h.name)+" v "+esc(lows.md.a.name)+" ("+Math.round(lows.p)+"%). These are estimates, not guarantees.</p>";
+ T10.forEach(function(c,i){var tr=c.m=="dc"?tierOf(c.p,85,78):c.m=="w"?tierOf(c.p,65,58):tierOf(c.p,70,64);
+  h+="<div class='lvrow'><b>#"+(i+1)+" · "+esc(ht(c.g.t))+"</b> <span class='mid'>"+esc(D[c.g.k].n)+" · "+T10N[c.m]+"</span><br><b>"+esc(c.md.h.name)+" v "+esc(c.md.a.name)+"</b><br>"+esc(c.label)+" — <b>"+Math.round(c.p)+"%</b> <span class='tag "+tr[1]+"'>"+tr[0]+"</span><p style='margin:6px 0;font-size:14px'>"+esc(c.sum)+"</p><button class='alt sm' data-t10='"+i+"'>Open full analysis</button></div>"});
+ box.innerHTML=h;
+ box.querySelectorAll("button[data-t10]").forEach(function(x){x.onclick=function(){pick(T10[+x.dataset.t10].g)}})
+}
+function t10Text(){return"Ettylinks Top "+T10.length+" confident picks, "+document.getElementById("dt").value+"\n"+T10.map(function(c,i){return(i+1)+". "+ht(c.g.t)+" "+c.md.h.name+" v "+c.md.a.name+" — "+c.label+" ("+Math.round(c.p)+"%)"}).join("\n")+"\nEstimates, not guarantees. Bet responsibly."}
+function aiErrHtml(j){var e=j.error,adm=ME&&ME.role=="admin";return'<p class="note">'+esc(e=="no_ai_key"?"Claude second opinions are not switched on yet. The developer must add ANTHROPIC_API_KEY (see README).":e=="user_limit"?"You have used today’s "+j.limit+" Claude checks. Try again tomorrow.":e=="site_limit"?"The site’s daily Claude limit is used up. Try again tomorrow.":"Claude could not be reached right now. Try again shortly."+(adm&&j.status?" (HTTP "+j.status+(j.message?": "+j.message:"")+")":""))+"</p>"}
+function aiHtml(j){var cls=j.stance=="agree"?"good":j.stance=="disagree"?"bad":"mid",lab=j.stance=="agree"?"Claude agrees":j.stance=="disagree"?"Claude disagrees":"Claude says be careful";
+ return'<div class="lvrow"><span class="tag '+cls+'">'+lab+'</span> <span class="mid">confidence: '+esc(j.confidence)+(j.cached?" · saved answer":"")+'</span><p style="margin:8px 0 0">'+esc(j.summary)+"</p>"+(j.risks&&j.risks.length?"<ul style='margin:6px 0 0 18px;padding:0'>"+j.risks.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul>":"")+'<p class="mid" style="margin:8px 0 0;font-size:13px">AI commentary on the model’s numbers, not a guarantee. Claude cannot see line-ups or injuries.</p></div>'}
+async function t10Review(){var b=document.getElementById("t10ai");if(!T10.length){b.textContent="Nothing to review yet.";return}b.textContent="Asking Claude…";
+ var r=await api("ai",{ctx:{kind:"top10",date:document.getElementById("dt").value,picks:T10.map(function(c){return{match:c.md.h.name+" v "+c.md.a.name,league:D[c.g.k].n,market:c.label,modelPct:Math.round(c.p),facts:c.facts}})}});
+ b.innerHTML=r.ok?aiHtml(r.j):aiErrHtml(r.j||{})}
+document.getElementById("t10s").onchange=renderTop10;
+document.getElementById("t10b").onclick=renderTop10;
+document.getElementById("t10r").onclick=function(){T10=t10Pick(0.8);t10Draw()};
+document.getElementById("t10a").onclick=t10Review;
+document.getElementById("t10c").onclick=function(){var tx=t10Text(),b=document.getElementById("t10ai");
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(function(){b.innerHTML="<p class='note'>Copied. Paste it into WhatsApp or a note.</p>"},function(){b.innerHTML="<textarea readonly>"+esc(tx)+"</textarea>"});
+ else b.innerHTML="<textarea readonly>"+esc(tx)+"</textarea>"};
 document.getElementById("go").onclick=run;
 document.getElementById("hb").onclick=runHistory;
 document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;EH=null;EA=null;CTXD=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
