@@ -39,7 +39,7 @@ button{font:600 16px "Barlow",sans-serif;background:var(--gold);color:#0D1220;bo
 button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button.sm{padding:4px 10px;font-size:13px}
 .fx{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--bg);color:var(--ink);border:1px solid var(--line);margin-top:8px;font-weight:500}
-.fx b{font:700 18px "Barlow Condensed",sans-serif;min-width:48px}.fx small{color:var(--mute);margin-left:auto}
+.fx b{font:700 18px "Barlow Condensed",sans-serif;min-width:48px}.fx small{color:var(--mute)}
 .fx[aria-pressed=true]{border:2px solid var(--gold)}
 .strip{display:flex;height:54px;border-radius:8px;overflow:hidden;border:2px solid var(--ink)}
 .strip div{display:flex;align-items:center;justify-content:center;font:700 20px "Barlow Condensed",sans-serif}
@@ -80,15 +80,9 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 .lvrow table{margin-top:6px;font-size:14px}.lvrow .xg{font-size:26px}
 .hit{color:var(--ok);font-weight:700}.miss{color:var(--warn);font-weight:700}
 .sr{position:absolute;left:-9999px}
-.lgh{grid-column:1/-1;margin:14px 0 0;font:700 18px "Barlow Condensed",sans-serif;color:var(--goldtext)}
-.off{display:none!important}
-.tabbar{display:flex;gap:6px;overflow-x:auto;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line);margin-top:8px;-webkit-overflow-scrolling:touch}
-.tabbar button{white-space:nowrap;flex:0 0 auto}
-.tabbar button[aria-selected=true]{background:var(--gold);color:#0D1220;border-color:var(--gold)}
-.fbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:6px 0 0}
-.fbar[hidden],.fbar>div[hidden]{display:none}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0}
-.tiles .lvrow{margin:0}.tiles .xg{font-size:24px}
+.dnav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dnav input{flex:1;min-width:130px;width:auto}.dnav button{padding:10px 14px}.dnav #prev,.dnav #next{font-size:22px;line-height:1;padding:8px 16px}
+.watch{margin:8px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px}.wbtn{display:inline-block;margin:6px 6px 2px 0;padding:8px 12px;border-radius:8px;background:var(--gold);color:#0D1220!important;text-decoration:none;font-weight:600}.wnote{display:block;margin-top:4px}.livebar{margin:8px 0;padding:10px 12px;border:2px solid var(--warn);border-radius:10px}.livebar p{margin:6px 0}
+.fxm{flex:1;min-width:0}.fxm small{margin-left:0}.fxr{text-align:right;white-space:nowrap}.fx .sc{font-size:20px}
 </style>
 </head>
 <body>
@@ -100,86 +94,45 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
 </header>
 <main>
 
-<nav id="tabs" class="tabbar" role="tablist" aria-label="Sections" hidden></nav>
-<div id="fbar" class="fbar" hidden>
- <div id="fdw"><label for="dt">Date</label><input type="date" id="dt" value="2026-10-18"></div>
- <div id="flw"><label for="fl">League</label><select id="fl"><option value="all">All leagues</option></select></div>
- <div id="fsw"><label for="fs">Status</label><select id="fs"><option value="all">All</option><option value="live">Live</option><option value="up">Upcoming</option><option value="fin">Finished</option></select></div>
- <div id="fqw"><label for="fq">Team</label><input type="text" id="fq" placeholder="Search a team" autocomplete="off"></div>
-</div>
-
-<section class="card" id="acct" data-tab="account">
+<section class="card" id="acct">
  <h2>Account</h2>
  <div id="acctBody">Checking sign-in…</div>
 </section>
 
 <div id="app" hidden>
-<section class="card" id="md" data-tab="games">
- <h2>Games</h2>
+<section class="card">
+ <h2>Match day</h2>
+ <label for="dt">Date</label>
+ <div class="dnav"><button type="button" class="alt" id="prev" aria-label="Previous day" title="Previous day">‹</button><input type="date" id="dt"><button type="button" class="alt" id="today">Today</button><button type="button" class="alt" id="next" aria-label="Next day" title="Next day">›</button></div>
  <div id="list" class="fxlist" aria-live="polite"></div>
- <p class="note">Games load automatically for the date you pick, from the leagues your data feed covers. If the feed is not connected, a saved snapshot is shown instead. Any other league works through the manual match below.</p>
+ <p class="note">Games load from football-data.org for any date, for the competitions on its free plan (Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Championship, Eredivisie, Primeira Liga, Brasileirão, Champions League, European Championship, World Cup). Games that have finished show whether the model’s call was a hit or a miss. Other leagues work through the manual match below.</p>
 </section>
 
-<section class="card" id="top10" data-tab="picks">
- <h2>Top 10 confident picks</h2>
- <p class="mid" style="margin:0">The model's most confident picks for the chosen day across all leagues (or the league you filtered): double chance (1X, 12, X2), sure wins and both teams to score. One pick per game, spread across leagues and markets. Corners and goalscorers are not included, because the data feed has no corner counts or line-ups.</p>
- <div class="grid"><div><label for="t10s">Confidence bar</label><select id="t10s"><option value="conf">Confident</option><option value="very">Very confident</option><option value="relaxed">Relaxed</option></select></div></div>
- <p><button id="t10b">Best 10</button> <button class="alt" id="t10r">Shuffle 10</button> <button class="alt" id="t10c">Copy list</button> <button class="alt" id="t10a">Ask Claude to review</button></p>
- <div id="t10body"></div><div id="t10ai"></div>
+<section class="card" id="rec">
+ <h2>Model track record</h2>
+ <label for="rp">Period</label>
+ <select id="rp"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="0">All time</option></select>
+ <div id="recBody" aria-live="polite">Loading…</div>
 </section>
 
-<section class="card" id="picks" data-tab="picks">
- <h2>Confidence picks</h2>
- <p class="mid" style="margin:0 0 6px">Double chance, favourite to win and both teams to score for the chosen day. Only the games the model is most sure about.</p>
- <label for="pk">Strictness</label>
- <select id="pk"><option value="bal">Balanced</option><option value="strict">Strict</option><option value="vs">Very strict</option></select>
- <div id="picksBody"></div>
-</section>
+<div id="out" hidden aria-live="polite"></div>
 
-<section class="card" id="live" data-tab="live">
- <h2>Live and concluded games</h2>
- <div id="liveBody" aria-live="polite">Loading…</div>
-</section>
-
-<section class="card" id="lgs" data-tab="leagues">
- <h2>League analysis</h2>
- <div id="lgsBody"></div>
-</section>
-
-<section class="card" id="anh" data-tab="analysis"><h2>Match analysis</h2><p class="mid" style="margin:0">Pick a game from Games, Picks or Live and its full analysis appears here.</p></section>
-<div id="out" hidden aria-live="polite" data-tab="analysis"></div>
-
-<section class="card" id="sumcard" data-tab="record">
- <h2>System prediction summary</h2>
- <label for="sc">Scope</label>
- <select id="sc"><option value="day">Selected match day</option><option value="all">All loaded games (a day either side)</option></select>
+<section class="card">
+ <h2>Predictions for this match day</h2>
  <div id="sum" class="scroll"></div>
 </section>
 
-<section class="card" id="hist" data-tab="record">
- <h2>Past results and model record</h2>
- <div class="grid">
-  <div><label for="hf">From</label><input type="date" id="hf"></div>
-  <div><label for="ht">To</label><input type="date" id="ht"></div>
- </div>
- <p style="margin:10px 0 0"><button class="alt sm" id="hp0">Today</button> <button class="alt sm" id="hp1">Yesterday</button> <button class="alt sm" id="hp7">Last 7 days</button> <button class="alt sm" id="hp30">Last 30 days</button></p>
- <label for="hs">Show games</label>
- <select id="hs"><option value="all">All games</option><option value="hit">Result called right</option><option value="miss">Result called wrong</option></select>
- <p><button id="hb">Check how predictions did</button></p>
- <div id="histBody" class="scroll"></div>
-</section>
-
-<section class="card" id="mycard" data-tab="saved">
+<section class="card">
  <h2>My predictions</h2>
  <div id="mine" class="scroll">Run a prediction, then choose Save.</div>
 </section>
 
-<section class="card" id="dev" hidden data-tab="admin">
+<section class="card" id="dev" hidden>
  <h2>Developer panel <span class="chip">Developer</span></h2>
  <div id="devBody" class="scroll">Loading…</div>
 </section>
 
-<details class="card" id="form" open data-tab="analysis">
+<details class="card" id="form" open>
  <summary>Inputs used (edit to test what-ifs, or type any match)</summary>
  <div class="grid">
   <div>
@@ -212,10 +165,7 @@ input[type=tel]{width:100%;font:inherit;color:var(--ink);background:var(--bg);bo
  <p>Contact: <a href="tel:0786317916">0786317916</a> · <a href="tel:+254726960303">+254 726 960 303</a></p>
 </footer>
 <script>
-var D={};
-function G(k,s){var p=s.split(" ");return{k:k,t:new Date(p[0]+":00Z"),h:p[1],a:p[2],x:p.slice(3).map(Number)}}
-var R={},FX={},ALL=[],ctx="",PROV=null,FH=1,FA=1,LK=null,last=null,EH=null,EA=null,CTXD=null,LASTR=null,REL={dc:[],w:[],b:[]};
-function build(){R={};FX={};ALL=[];Object.keys(D).forEach(function(k){R[k]=D[k].r.map(function(s){return G(k,s)});FX[k]=D[k].f.map(function(s){return G(k,s)});FX[k].forEach(function(g){ALL.push(g)})})}build();
+var WATCH={},WTC="",GM=[],CUR=null,PEND=[],GERR="",GDET="",STALE=false,RETRY=0,RT=null,LOADING=0,FINN=-1,RES="",ctx="",FH=1,FA=1,last=null;
 function z(n){return(n<10?"0":"")+n}
 function ld(d){return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())}
 function ht(d){return z(d.getHours())+":"+z(d.getMinutes())}
@@ -229,25 +179,11 @@ function P(k,l){return Math.exp(-l)*Math.pow(l,k)/F[k]}
 function tau(i,j,a,b,r){if(i==0&&j==0)return 1-a*b*r;if(i==0&&j==1)return 1+a*r;if(i==1&&j==0)return 1+b*r;if(i==1&&j==1)return 1-r;return 1}
 ["hi","ai"].forEach(function(id){document.getElementById(id).oninput=function(){document.getElementById(id+"v").textContent=this.value}});
 
-function lgAvg(k,ko){var h=0,a=0,n=0;R[k].forEach(function(g){if(!ko||g.t<ko){h+=g.x[0];a+=g.x[1];n++}});return[(h+15)/(n+10),(a+12)/(n+10)]}
-function info(k,ab,ko){
- var tb=D[k].t[ab],dyn=D[k].dyn,res=R[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t<ko}).sort(function(a,b){return a.t-b.t}),gf=0,ga=0,pts=0,p5=0,lines=[];
- res.forEach(function(g,i){var home=g.h==ab,f=home?g.x[0]:g.x[1],a=home?g.x[1]:g.x[0],o=(D[k].t[home?g.a:g.h]||["?"])[0],pp=f>a?3:f==a?1:0;gf+=f;ga+=a;pts+=pp;if(i>=res.length-5)p5+=pp;lines.push((f>a?"W":f==a?"D":"L")+" "+f+"-"+a+(home?" v ":" at ")+o)});
- var ppg=dyn?(res.length?pts/res.length:1.4):(tb[3]?tb[2]/tb[3]:1.4),wp=res.length?(dyn?p5/Math.min(5,res.length):pts/res.length):ppg,form=5*(0.5*ppg+0.5*wp);
- var prev=res.length?(ko-res[res.length-1].t)/864e5:null;
- var nx=FX[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t>ko}).sort(function(a,b){return a.t-b.t})[0];
- var nd=nx?(nx.t-ko)/864e5:null,fat=1,flags=[];
- if(prev!==null&&prev<3.5){fat*=0.97;flags.push("only "+Math.round(prev)+" days of rest")}
- if(nd!==null&&nd<3.5){fat*=0.98;flags.push("plays again in "+Math.round(nd)+" days, so rotation is possible")}
- return{name:tb[0],elo:tb[4]||null,rank:dyn?0:tb[1],pts:dyn?pts:tb[2],gp:dyn?res.length:tb[3],n:res.length,gf:gf,ga:ga,form:form,lines:lines.slice(-4),fat:fat,flags:flags,next:nx?((D[k].t[nx.h==ab?nx.a:nx.h]||["?"])[0]+(nx.h==ab?" (home) ":" (away) ")+ld(nx.t)):"none in the data"}
-}
-function rankAt(k,ab,ko){var Pt={},Gd={};R[k].forEach(function(g){if(g.t>=ko)return;var x=g.x[0],y=g.x[1];Pt[g.h]=(Pt[g.h]||0)+(x>y?3:x==y?1:0);Pt[g.a]=(Pt[g.a]||0)+(y>x?3:x==y?1:0);Gd[g.h]=(Gd[g.h]||0)+x-y;Gd[g.a]=(Gd[g.a]||0)+y-x});var arr=Object.keys(Pt).sort(function(a,b){return Pt[b]-Pt[a]||Gd[b]-Gd[a]}),i=arr.indexOf(String(ab));return i<0?0:i+1}
 // Core model: shrunk goal rates, form, fatigue, injuries, then a Dixon-Coles style Poisson grid
 function calc(p,hn,an){
  var K=5,AV=(p.LH+p.LA)/2;
  function s(f,n){return((f+K*AV)/(n+K))/AV}
  var lh=p.LH*s(p.hf,p.hg)*s(p.aa,p.ag),la=p.LA*s(p.af,p.ag)*s(p.ha,p.hg);
- if(p.eh&&p.ea){var dd=p.eh-p.ea;lh*=Math.pow(10,dd/1250);la*=Math.pow(10,-dd/1250)}
  lh*=(1+(p.hp-7)*0.012)*p.FH*(1-p.hi/100);la*=(1+(p.ap-7)*0.012)*p.FA*(1-p.ai/100);
  var M=[],t=0,i,j,h=0,d=0,a=0,bt=0,o25=0,sc=[];
  for(i=0;i<9;i++){M[i]=[];for(j=0;j<9;j++){M[i][j]=P(i,lh)*P(j,la)*tau(i,j,lh,la,-0.1);t+=M[i][j]}}
@@ -257,167 +193,168 @@ function calc(p,hn,an){
  var top=Math.max(h,d,a);
  return{h:h,d:d,a:a,bt:bt,o25:o25,lh:lh,la:la,sc:sc,dc:dc,top:top,side:top==h?hn+" win":top==a?an+" win":"Draw",key:top==h?"H":top==a?"A":"D"}
 }
-function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),af:v("af"),ag:v("ag"),aa:v("aa"),ap:v("ap"),ai:v("ai"),LH:v("lh"),LA:v("la"),FH:FH,FA:FA,eh:EH,ea:EA}}
+function inputs(){return{hf:v("hf"),hg:v("hg"),ha:v("ha"),hp:v("hp"),hi:v("hi"),af:v("af"),ag:v("ag"),aa:v("aa"),ap:v("ap"),ai:v("ai"),LH:v("lh"),LA:v("la"),FH:FH,FA:FA}}
 
-var DYN=false,SNAP=null,META={},MSG="",RETRY=null;
+// ---- Match day: games for the chosen date come from the server (football-data.org), with the model's call and, once finished, hit or miss
+var GMSG={no_key:"The football data feed is not connected yet. The developer needs to add FOOTBALL_DATA_KEY in Cloudflare (see README.txt).",key:"football-data.org did not accept the API key, or the plan does not include this data. The developer should check FOOTBALL_DATA_KEY.",rate:"The data source is busy (the free plan allows 10 requests a minute). Try again in a minute.",api:"Could not reach football-data.org right now. Try again shortly.",bad_date:"Pick a valid date.",error:"Could not load games. Check your connection and try again."};
+function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,i,j;
+ for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p}
+ var t=h+d+a;return{H:h/t,D:d/t,A:a/t}}
+function frac(g){var e;if(g.m!=null)e=g.m;else if(g.s=="PAUSED")e=45;else{e=(Date.now()-new Date(g.t))/6e4;if(e>62)e-=15}return Math.max(0,Math.min(e,90))/90}
+function isLive(g){return g.s=="IN_PLAY"||g.s=="PAUSED"}
+function isDone(g){return g.s=="FINISHED"&&g.hs!=null&&g.as!=null}
+function mark(ok){return ok?'<span class="hit">✓<span class="sr"> hit</span></span>':'<span class="miss">✗<span class="sr"> miss</span></span>'}
+function srcNote(g){return g.src=="live"?"Called before kick-off and locked in the record.":"Re-run afterwards using only results from before kick-off (a backtest, not a live call)."}
+// ---- Where to watch (official broadcaster links, set by the developer)
+var CNAME={PL:"Premier League",PD:"La Liga",SA:"Serie A",BL1:"Bundesliga",FL1:"Ligue 1",ELC:"Championship",DED:"Eredivisie",PPL:"Primeira Liga",BSA:"Brasileirão",CL:"Champions League",EC:"European Championship",WC:"World Cup"};
+function watchLinks(g){return(WATCH[g.c]||[]).map(function(x){return/^https:\/\//.test(x.u||"")?'<a class="wbtn" href="'+esc(x.u)+'" target="_blank" rel="noopener noreferrer">'+esc(x.t)+" ↗</a>":'<span class="mid wnote">'+esc(x.t)+"</span>"}).join(" ")}
+function watchBlock(g){var l=watchLinks(g);return l?'<div class="watch"><b>Where to watch</b><br>'+l+"</div>":""}
+async function loadWatch(){var r=await api("watch");if(r.ok&&r.j&&r.j.links)WATCH=r.j.links}
+function watchEditor(){
+ var h="<h2 style='margin-top:16px'>Where to watch links</h2><p class='note'>One link per line: <b>Label | https://link</b>. A line with no link shows as a plain note. Only official broadcaster or app pages; https only. Shown on live and upcoming games.</p>";
+ Object.keys(CNAME).forEach(function(c){var v=(WATCH[c]||[]).map(function(x){return x.t+(x.u?" | "+x.u:"")}).join("\n");h+="<label for='w_"+c+"'>"+esc(CNAME[c])+"</label><textarea id='w_"+c+"' data-wc='"+c+"' rows='3' style='width:100%'>"+esc(v)+"</textarea>"});
+ return h+"<p><button id='wsave'>Save links</button> <button class='alt' id='wreset'>Back to defaults</button> <span id='wmsg' class='mid'></span></p>"}
+function wireWatch(){
+ var sv=document.getElementById("wsave"),rs=document.getElementById("wreset"),m=document.getElementById("wmsg");if(!sv)return;
+ sv.onclick=async function(){var o={};document.querySelectorAll("#devBody textarea[data-wc]").forEach(function(x){o[x.getAttribute("data-wc")]=x.value.split("\n").map(function(l){l=l.trim();if(!l)return null;var i=l.lastIndexOf("|");return i<0?{t:l,u:""}:{t:l.slice(0,i).trim(),u:l.slice(i+1).trim()}}).filter(Boolean)});
+  var r=await api("admin/watch",{links:o});
+  if(r.ok){WATCH=r.j.links;m.textContent="Saved.";list()}else m.textContent=r.j&&r.j.error=="bad_url"?"Check the link on: "+(r.j.label||"a line")+" (it must start with https://).":"Could not save."};
+ rs.onclick=async function(){var r=await api("admin/watch",{reset:true});if(r.ok){WATCH=r.j.links;devPanel()}}}
 function list(){
- lgOpts();var d=document.getElementById("dt").value,items=ALL.filter(function(g){return ld(g.t)==d&&gFilter(g)}).sort(function(a,b){var x=D[a.k].n,y=D[b.k].n;return x<y?-1:x>y?1:a.t-b.t}),box=document.getElementById("list"),cur="";
- box.innerHTML=MSG?'<p class="note">'+esc(MSG)+"</p>":"";
- if(!items.length)box.innerHTML+='<p class="note">No games found for this date'+(DYN?" in the leagues your data plan covers.":" in the saved snapshot (10–24 Oct 2026). Connect the live feed (README) to load any date.")+"</p>";
- items.forEach(function(g){
-  if(D[g.k].n!=cur){cur=D[g.k].n;var hd=document.createElement("h3");hd.className="lgh";hd.textContent=cur;box.appendChild(hd)}
-  var b=document.createElement("button"),mt=META[g.x[3]],st="";
-  if(mt&&mt.s=="FINISHED"&&mt.hs!=null)st="FT "+mt.hs+"–"+mt.as+" "+mark(evalGame(mfor(g.k,g.h,g.a,g.t).r,mt.hs,mt.as).res);
-  else if(mt&&(mt.s=="IN_PLAY"||mt.s=="PAUSED"))st='<span class="live">LIVE</span> '+(mt.hs==null?0:mt.hs)+"–"+(mt.as==null?0:mt.as);
-  else if(mt&&(mt.s=="POSTPONED"||mt.s=="CANCELLED"||mt.s=="SUSPENDED"))st=mt.s.toLowerCase();
-  b.className="fx";b.setAttribute("aria-pressed","false");
-  b.innerHTML="<b>"+ht(g.t)+"</b><span>"+esc(D[g.k].t[g.h][0])+" v "+esc(D[g.k].t[g.a][0])+"</span><small>"+st+"</small>";
+ var box=document.getElementById("list"),d=document.getElementById("dt").value,h="";
+ box.innerHTML="";
+ if(GERR){box.innerHTML='<p class="note">'+esc(GMSG[GERR]||GMSG.error)+(GDET?'<br><small>Details for the developer: '+esc(GDET)+"</small>":"")+"</p>";summary();return}
+ if(!GM.length)box.innerHTML='<p class="note">No games on this date in the covered competitions. Try another date.</p>';
+ if(PEND.length)box.insertAdjacentHTML("afterbegin",'<p class="note">Still loading team data for '+esc(PEND.join(", "))+'. Those games show up without a prediction for now; this page retries automatically.</p>');
+ if(STALE)box.insertAdjacentHTML("afterbegin",'<p class="note">The data source is not answering, so this is the last saved copy.</p>');
+ var lv=GM.filter(isLive);if(lv.length)box.insertAdjacentHTML("beforeend",'<div class="livebar"><b>Live now</b>'+lv.map(function(g){return"<p>"+esc(g.h.n)+" "+(g.hs==null?0:g.hs)+"–"+(g.as==null?0:g.as)+" "+esc(g.a.n)+(g.m!=null?" · "+g.m+"’":"")+"<br>"+(watchLinks(g)||'<span class="mid">No watch link set for '+esc(g.cn)+".</span>")+"</p>"}).join("")+"</div>");
+ GM.forEach(function(g){var b=document.createElement("button"),r="",p=g.p,sub=esc(g.cn)+(p?" · "+esc(p.side)+" "+pc(p.top)+"%":" · no model data yet");
+  if(isDone(g))r='<b class="sc">'+g.hs+"–"+g.as+"</b>"+(g.ev?" "+mark(g.ev.res):"");
+  else if(isLive(g)){r='<span class="live">LIVE</span> '+(g.m!=null?g.m+"’":g.s=="PAUSED"?"HT":"")+' <b class="sc">'+(g.hs==null?0:g.hs)+"–"+(g.as==null?0:g.as)+"</b>";
+   if(p){var lp=liveProb(p.lh,p.la,frac(g),g.hs||0,g.as||0);sub+="<br>Live chances: "+esc(g.h.n)+" "+pc(lp.H)+"%, draw "+pc(lp.D)+"%, "+esc(g.a.n)+" "+pc(lp.A)+"%"}}
+  else if(g.s=="POSTPONED"||g.s=="CANCELLED"||g.s=="SUSPENDED")r='<span class="mid">'+esc(g.s.toLowerCase())+"</span>";
+  b.className="fx";b.setAttribute("aria-pressed",String(!!CUR&&CUR.id==g.id));
+  b.innerHTML="<b>"+ht(new Date(g.t))+'</b><span class="fxm">'+esc(g.h.n)+" v "+esc(g.a.n)+'<br><small class="mid">'+sub+'</small></span><span class="fxr">'+r+"</span>";
   b.onclick=function(){box.querySelectorAll(".fx").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");pick(g)};box.appendChild(b)});
- summary();renderPicks();renderTop10()
+ summary()
 }
 function pick(g){
- var h=info(g.k,g.h,g.t),a=info(g.k,g.a,g.t),l=lgAvg(g.k,g.t);LK=g.k;
- if(D[g.k].dyn){h.rank=rankAt(g.k,g.h,g.t);a.rank=rankAt(g.k,g.a,g.t)}
- sv("hn",h.name);sv("hg",h.n);sv("hf",h.gf);sv("ha",h.ga);sv("hp",h.form.toFixed(1));
- sv("an",a.name);sv("ag",a.n);sv("af",a.gf);sv("aa",a.ga);sv("ap",a.form.toFixed(1));
- sv("lh",l[0].toFixed(2));sv("la",l[1].toFixed(2));
- FH=h.fat;FA=a.fat;PROV=g.x;CTXD={h:h,a:a,ha:g.h,aa:g.a,ko:g.t};EH=h.elo;EA=a.elo;
- function box(t,i){return"<p><b>"+esc(t)+"</b>: "+(i.rank?i.rank+ordn(i.rank)+" on ":"")+i.pts+" pts from "+i.gp+" games. Last results: "+(esc(i.lines.join("; "))||"none in the data")+". Next: "+esc(i.next)+"."+(i.flags.length?' <span class="bad">Flag: '+i.flags.join("; ")+".</span>":"")+"</p>"}
- var mt=META[g.x[3]],res="";
- if(mt&&mt.s=="FINISHED"&&mt.hs!=null){var r0=mfor(g.k,g.h,g.a,g.t).r,e=evalGame(r0,mt.hs,mt.as);
-  res="<p><b>Final score: "+esc(h.name)+" "+mt.hs+" – "+mt.as+" "+esc(a.name)+".</b> Model before the game: "+esc(r0.side)+" "+pc(r0.top)+"% "+mark(e.res)+" · Double chance "+esc(r0.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+(r0.bt>=0.5?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+(r0.o25>=0.5?"Yes":"No")+" "+mark(e.ov)+"</p>"}
- else if(mt&&(mt.s=="IN_PLAY"||mt.s=="PAUSED"))res="<p><b>In play: "+esc(h.name)+" "+(mt.hs==null?0:mt.hs)+" – "+(mt.as==null?0:mt.as)+" "+esc(a.name)+".</b> The Live card has in-play chances.</p>";
- ctx='<div class="ctx">'+res+box(h.name,h)+box(a.name,a)+"</div>";
- run();showTab("analysis")
+ CUR=g;var p=g.p,o=document.getElementById("out");
+ if(!p){ctx="";RES="";WTC="";o.hidden=false;o.innerHTML='<section class="card"><h2>'+esc(g.h.n)+" v "+esc(g.a.n)+'</h2><p class="note" style="margin-top:0">No prediction yet: team data for this competition is still loading, or the game is not scheduled. Check again in a minute.</p></section>';return}
+ var i=p.inp;
+ sv("hn",g.h.n);sv("hg",i.hg);sv("hf",i.hf);sv("ha",i.ha);sv("hp",i.hp);sv("hi",0);document.getElementById("hiv").textContent="0";
+ sv("an",g.a.n);sv("ag",i.ag);sv("af",i.af);sv("aa",i.aa);sv("ap",i.ap);sv("ai",0);document.getElementById("aiv").textContent="0";
+ sv("lh",i.LH);sv("la",i.LA);FH=i.FH;FA=i.FA;
+ function box(t,c){return"<p><b>"+esc(t)+"</b>: "+(c.rank?c.rank+ordn(c.rank)+" on "+c.pts+" pts from "+c.gp+" games. ":c.gp+" games played, "+c.pts+" pts. ")+"Last results: "+(esc(c.lines.join("; "))||"none yet")+". Next: "+esc(c.next)+"."+(c.flags.length?' <span class="bad">Flag: '+esc(c.flags.join("; "))+".</span>":"")+"</p>"}
+ ctx='<div class="ctx">'+box(g.h.n,p.ctx.h)+box(g.a.n,p.ctx.a)+"</div>";WTC=isDone(g)?"":watchBlock(g);
+ RES=resultBlock(g);run()
 }
+function resultBlock(g){var p=g.p,h="";
+ if(isDone(g)&&g.ev){var e=g.ev;
+  h+='<h2 style="margin-top:14px">Recorded prediction v result</h2><p style="margin:0 0 6px"><span class="xg">'+esc(g.h.n)+" "+g.hs+" – "+g.as+" "+esc(g.a.n)+'</span> <span class="mid">(90 minutes)</span></p>'
+  +"<table><tr><th>Market</th><th>Model said</th><th>Result</th></tr>"
+  +"<tr><td>Result</td><td>"+esc(p.side)+" "+pc(p.top)+"%</td><td>"+mark(e.res)+"</td></tr>"
+  +"<tr><td>Double chance</td><td>"+esc(p.dc.split(" ")[0])+" "+pc(p.dcp)+"%</td><td>"+mark(e.dc)+"</td></tr>"
+  +"<tr><td>Both teams to score</td><td>"+(p.bt>=0.5?"Yes":"No")+" ("+pc(p.bt>=0.5?p.bt:1-p.bt)+"%)</td><td>"+mark(e.bt)+"</td></tr>"
+  +"<tr><td>Over/under 2.5</td><td>"+(p.o25>=0.5?"Over":"Under")+" ("+pc(p.o25>=0.5?p.o25:1-p.o25)+"%)</td><td>"+mark(e.ov)+"</td></tr></table>"
+  +'<p class="note">'+srcNote(g)+" A hit on one game proves little; judge the model on the track record below.</p>"}
+ else if(isLive(g)){var lp=liveProb(p.lh,p.la,frac(g),g.hs||0,g.as||0);
+  h+='<h2 style="margin-top:14px">Live now <span class="live">LIVE</span></h2><p style="margin:0 0 6px"><span class="xg">'+esc(g.h.n)+" "+(g.hs||0)+" – "+(g.as||0)+" "+esc(g.a.n)+"</span> "+(g.m!=null?g.m+"’":g.s=="PAUSED"?"HT":"")+"</p>"
+  +"<table><tr><th></th><th>"+esc(g.h.n)+"</th><th>Draw</th><th>"+esc(g.a.n)+"</th></tr><tr><td>Before kick-off</td><td class='n'>"+pc(p.h)+"%</td><td class='n'>"+pc(p.d)+"%</td><td class='n'>"+pc(p.a)+"%</td></tr><tr><td>Live now</td><td class='n'>"+pc(lp.H)+"%</td><td class='n'>"+pc(lp.D)+"%</td><td class='n'>"+pc(lp.A)+"%</td></tr></table>"
+  +'<p class="note">The pre-match call is locked in the record. Live chances use the clock and score; free-plan scores can be delayed.</p>'}
+ else if(g.s=="SCHEDULED"||g.s=="TIMED")h+='<p class="note">This prediction is refreshed as new results arrive and is locked in at kick-off. Afterwards the game shows here as a hit or a miss.</p>';
+ return h}
 function run(){
- var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;LASTR={r:r,hn:hn,an:an};
+ var hn=document.getElementById("hn").value||"Home",an=document.getElementById("an").value||"Away",r=calc(inputs(),hn,an),h=r.h,d=r.d,a=r.a;
  function tag(p,hi,lo){return p>=hi?'<span class="tag good">Strong lean</span>':p>=lo?'<span class="tag mid">Slight lean</span>':'<span class="tag bad">Too close</span>'}
  function row(n,p,hi,lo){return"<tr><td>"+n+'</td><td class="n">'+pc(p)+"%</td><td>"+tag(p,hi,lo)+"</td></tr>"}
- var pv=PROV&&(PROV[0]+PROV[1]+PROV[2])>0?'<p class="note">Data provider’s own model: '+esc(hn)+" "+Math.round(PROV[0])+"%, draw "+Math.round(PROV[1])+"%, "+esc(an)+" "+Math.round(PROV[2])+"%. Where it and this model agree, the call is sturdier.</p>":"";
- last={t:Date.now(),d:document.getElementById("dt").value,l:LK?D[LK].n:"Manual",m:hn+" v "+an,p:r.side,h:pc(h),x:pc(d),a:pc(a),dc:r.dc[0],bt:pc(r.bt),o:pc(r.o25)};
- var o=document.getElementById("out");o.hidden=false;document.getElementById("anh").hidden=true;
- o.innerHTML='<section class="card"><h2>'+esc(hn)+" v "+esc(an)+"</h2>"+ctx+sbs()
+ last={t:Date.now(),d:document.getElementById("dt").value,l:CUR?CUR.cn:"Manual",m:hn+" v "+an,p:r.side,h:pc(h),x:pc(d),a:pc(a),dc:r.dc[0],bt:pc(r.bt),o:pc(r.o25)};
+ var o=document.getElementById("out");o.hidden=false;
+ o.innerHTML='<section class="card"><h2>'+esc(hn)+" v "+esc(an)+"</h2>"+WTC+ctx
  +'<div class="strip" role="img" aria-label="Win probabilities"><div class="h" style="width:'+h*100+'%">'+pc(h)+'%</div><div class="d" style="width:'+d*100+'%">'+pc(d)+'%</div><div class="a" style="width:'+a*100+'%">'+pc(a)+"%</div></div>"
  +'<div class="legend"><span>'+esc(hn)+"</span><span>Draw</span><span>"+esc(an)+"</span></div>"
  +"<table><tr><th>Market</th><th>Chance</th><th>Read</th></tr>"
- +row("Most likely result: "+esc(r.side),r.top,0.55,0.45)+row("1X — "+esc(hn)+" or draw",r.h+r.d,0.80,0.70)+row("12 — either team wins",r.h+r.a,0.80,0.70)+row("X2 — "+esc(an)+" or draw",r.d+r.a,0.80,0.70)
+ +row("Most likely result: "+esc(r.side),r.top,0.55,0.45)+row("Double chance: "+esc(r.dc[0]),r.dc[1],0.80,0.70)
  +row("Both teams to score: Yes",r.bt,0.60,0.52)+row("Both teams to score: No",1-r.bt,0.60,0.52)
  +row("Over 2.5 goals",r.o25,0.60,0.52)+row("Under 2.5 goals",1-r.o25,0.60,0.52)+"</table>"
- +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+pv
- +'<p><button id="sv">Save this prediction</button> <button class="alt" id="ai">Ask Claude for a second opinion</button> <span id="svm" class="mid"></span></p><div id="aib"></div>'
- +'<p class="note">A 70% chance means about 7 wins in 10 similar games, not a guaranteed result. No model can honestly promise 90% across all matches. “Too close” means skip the game.</p></section>';
- document.getElementById("sv").onclick=saveLast;document.getElementById("ai").onclick=askAI;
+ +'<p><span class="xg">'+r.lh.toFixed(2)+" – "+r.la.toFixed(2)+"</span> expected goals. Likeliest scores: "+r.sc.slice(0,5).map(function(x){return x[0]+" ("+pc(x[1])+"%)"}).join(", ")+".</p>"+RES
+ +'<p><button id="sv">Save this prediction</button> <span id="svm" class="mid"></span></p>'
+ +'<p class="note">A 70% chance means about 7 wins in 10 similar games, not a guaranteed result. No model can honestly promise 90% across all matches. “Too close” means skip the game. Rest-day flags only look at games in the same competition.</p></section>';
+ document.getElementById("sv").onclick=saveLast;
  o.scrollIntoView({behavior:"smooth",block:"nearest"})
 }
-
-// System summary: runs the same model on every game in scope and checks finished ones against the real score
+// System summary: the model's calls for every game on the chosen date
 function summary(){
- var day=document.getElementById("sc").value=="day",d=document.getElementById("dt").value,T={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,fin:0,hit:0},calls="";
- var html="<table><tr><th>League</th><th>Games</th><th>Home</th><th>Draw</th><th>Away</th><th>Strong leans</th><th>GG lean</th><th>Over 2.5 lean</th><th>Finished: called right</th></tr>";
- function cells(c){return'<td class="n">'+c.n+'</td><td class="n">'+c.H+'</td><td class="n">'+c.D+'</td><td class="n">'+c.A+'</td><td class="n">'+c.s+'</td><td class="n">'+c.gg+'</td><td class="n">'+c.ov+'</td><td class="n">'+(c.fin?c.hit+"/"+c.fin:"-")+"</td>"}
- Object.keys(D).forEach(function(k){
-  if(LGF!="all"&&k!=LGF)return;
-  var c={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,fin:0,hit:0},best=[];
-  FX[k].filter(function(g){return!day||ld(g.t)==d}).forEach(function(g){
-   var md=mfor(k,g.h,g.a,g.t),r=md.r,mt=META[g.x[3]];
-   c.n++;c[r.key]++;if(r.top>=0.55)c.s++;if(r.bt>=0.52)c.gg++;if(r.o25>=0.52)c.ov++;
-   if(mt&&mt.s=="FINISHED"&&mt.hs!=null){c.fin++;if(evalGame(r,mt.hs,mt.as).res)c.hit++}
-   best.push([r.top,md.h.name+" v "+md.a.name+": "+r.side+" "+pc(r.top)+"%"])});
-  if(!c.n)return;
-  Object.keys(T).forEach(function(q){T[q]+=c[q]});
-  html+="<tr><td>"+esc(D[k].n)+"</td>"+cells(c)+"</tr>";
-  best.sort(function(x,y){return y[0]-x[0]});calls+="<p><b>"+esc(D[k].n)+"</b>: "+best.slice(0,3).map(function(x){return esc(x[1])}).join("; ")+".</p>"});
- html+="<tr><td><b>All leagues</b></td>"+cells(T)+"</tr></table>";
- html+=T.n?'<h2 style="margin-top:16px">Strongest calls</h2>'+calls+'<p class="note">Counts are the model’s lean in each game. A “strong lean” means 55% or more for the top result. For finished games the model is scored on the real result, using only data from before kick-off.</p>':'<p class="note">No games in scope. Pick another date or switch to all loaded games.</p>';
- document.getElementById("sum").innerHTML=html
+ var by={},order=[],T={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,f:0,hit:0};
+ GM.forEach(function(g){if(!g.p)return;var k=g.cn;if(!by[k]){by[k]={n:0,H:0,D:0,A:0,s:0,gg:0,ov:0,f:0,hit:0,best:[]};order.push(k)}
+  var c=by[k],p=g.p;c.n++;c[p.key]++;if(p.top>=0.55)c.s++;if(p.bt>=0.52)c.gg++;if(p.o25>=0.52)c.ov++;if(g.ev){c.f++;if(g.ev.res)c.hit++}
+  c.best.push([p.top,g.h.n+" v "+g.a.n+": "+p.side+" "+pc(p.top)+"%"])});
+ var html="<table><tr><th>League</th><th>Games</th><th>Home</th><th>Draw</th><th>Away</th><th>Strong leans</th><th>GG lean</th><th>Over 2.5 lean</th><th>Result record</th></tr>",calls="";
+ order.forEach(function(k){var c=by[k];Object.keys(T).forEach(function(q){T[q]+=c[q]});
+  html+="<tr><td>"+esc(k)+'</td><td class="n">'+c.n+'</td><td class="n">'+c.H+'</td><td class="n">'+c.D+'</td><td class="n">'+c.A+'</td><td class="n">'+c.s+'</td><td class="n">'+c.gg+'</td><td class="n">'+c.ov+'</td><td class="n">'+(c.f?c.hit+"/"+c.f:"–")+"</td></tr>";
+  c.best.sort(function(x,y){return y[0]-x[0]});calls+="<p><b>"+esc(k)+"</b>: "+c.best.slice(0,3).map(function(x){return esc(x[1])}).join("; ")+".</p>"});
+ if(order.length>1)html+='<tr><td><b>All leagues</b></td><td class="n">'+T.n+'</td><td class="n">'+T.H+'</td><td class="n">'+T.D+'</td><td class="n">'+T.A+'</td><td class="n">'+T.s+'</td><td class="n">'+T.gg+'</td><td class="n">'+T.ov+'</td><td class="n">'+(T.f?T.hit+"/"+T.f:"–")+"</td></tr>";
+ html+="</table>";
+ document.getElementById("sum").innerHTML=T.n?html+'<h2 style="margin-top:16px">Strongest calls</h2>'+calls+'<p class="note">Counts are the model’s lean in each game on this date. A “strong lean” means 55% or more for the top result. Result record counts finished games where the lean was right.</p>':'<p class="note">No predictions for this date yet.</p>'
 }
+
 // Accounts, payment approval and saved predictions are handled by the server (Cloudflare Worker + D1).
 var ME=null,saves=[],mode="login",flash="";
-var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again.",bad_plan:"Choose a plan.",too_many_pending:"You already have 3 payments waiting. Wait for approval first.",already_permanent:"You are already a permanent member."};
+var ERR={bad_name:"Enter your name.",bad_email:"Enter a valid email.",bad_password:"Password needs at least 8 characters.",bad_code:"Enter the 10-character M-Pesa code from your payment SMS.",bad_phone:"Enter a valid Kenyan phone number, for example 0712 345 678.",email_taken:"That email is already registered. Log in instead.",code_used:"That M-Pesa code has already been used.",bad:"Email or password is not correct.",slow:"Too many attempts. Wait 15 minutes and try again."};
 var WA="254726960303",noteHtml="";
 function waLink(t,n){return"https://wa.me/"+(n||WA)+"?text="+encodeURIComponent(t)}
-function payMsg(n,c,pl,amt){return"Hi, I'm "+n+". I paid "+money(amt)+" for the "+planName(pl)+" plan to Pochi la Biashara +254 726 960 303. M-Pesa code: "+c+". Please approve my payment."}
-function waBtn(n,c,pl,amt){return'<a class="btn" href="'+waLink(payMsg(n,c,pl,amt))+'" target="_blank" rel="noopener">Message us on WhatsApp</a>'}
-function statusHtml(k,n,c,pl,amt){
- var w="<p>"+waBtn(n,c,pl,amt)+"</p>";
- if(k=="registered")return"<p><b>Thanks, "+esc(n)+".</b> Your registration is received. We’re checking your "+money(amt)+" payment for the "+esc(planName(pl))+" plan (M-Pesa code "+esc(c)+"). This usually takes a few minutes. Come back and log in to see predictions once approved.</p>"+w;
- if(k=="pending")return"<p>Your payment is still being checked. You’ll be able to log in as soon as it’s approved. If it has taken more than 30 minutes, contact us on +254 726 960 303.</p>"+w;
- return"<p>Your registration wasn’t approved. This usually means the payment wasn’t received, the amount was wrong, or the M-Pesa code wasn’t found. Check your SMS and register again with the correct 10-character code, or contact us on +254 726 960 303 and we’ll help.</p>"+w
+function payMsg(n,c){return"Hi, I'm "+n+". I paid KSh 30 to Pochi la Biashara +254 726 960 303. M-Pesa code: "+c+". Please approve my account."}
+function waBtn(n,c){return'<a class="btn" href="'+waLink(payMsg(n,c))+'" target="_blank" rel="noopener">Message us on WhatsApp</a>'}
+function statusHtml(k,n,c){
+ if(k=="registered")return"<p><b>Thanks, "+esc(n)+".</b> Your registration is received. We’re checking your KSh 30 payment (M-Pesa code "+esc(c)+"). This usually takes a few minutes. Come back and log in to see predictions once approved.</p><p>"+waBtn(n,c)+"</p>";
+ if(k=="pending")return"<p>Your payment is still being checked. You’ll be able to log in as soon as it’s approved. If it has taken more than 30 minutes, contact us on +254 726 960 303.</p><p>"+waBtn(n,c)+"</p>";
+ return"<p>Your registration wasn’t approved. This usually means the payment wasn’t received, the amount was wrong, or the M-Pesa code wasn’t found. Check your SMS and register again with the correct 10-character code, or contact us on +254 726 960 303 and we’ll help.</p><p>"+waBtn(n,c)+"</p>"
 }
 async function api(path,body,method){
  var o={credentials:"same-origin",method:method||(body?"POST":"GET"),headers:{"content-type":"application/json"}};
  if(body)o.body=JSON.stringify(body);
- try{var r=await fetch("/api/"+path,o),j={};try{j=await r.json()}catch(e){}
-  if(r.status==402&&ME&&ME.role=="user"){ME.active=false;var ap=document.getElementById("app");if(ap)ap.hidden=true;renderAcct()}
-  return{ok:r.ok,status:r.status,j:j}}catch(e){return{ok:false,status:0,j:{}}}
+ try{var r=await fetch("/api/"+path,o),j={};try{j=await r.json()}catch(e){}return{ok:r.ok,status:r.status,j:j}}catch(e){return{ok:false,status:0,j:{}}}
 }
-var PLANS=[],PLN={},PNAME={day:"24 hours",week:"Weekly",month:"Monthly",year:"Yearly",life:"Permanent",legacy:"Registration (old)"};
-function money(n){return"KSh "+Number(n||0).toLocaleString("en-KE")}
-function planName(id){return PNAME[id]||String(id||"")}
-async function loadPlans(){var r=await api("plans");PLANS=r.ok&&r.j.plans?r.j.plans:[];PLN={};PLANS.forEach(function(q){PLN[q.id]=q})}
-function planOpts(sel){return PLANS.map(function(q){return'<option value="'+esc(q.id)+'"'+(q.id==sel?" selected":"")+">"+esc(q.name)+" — "+money(q.price)+"</option>"}).join("")}
-function payBox(id){var q=PLN[id]||PLANS[0];if(!q)return"";return"<b>Pay "+money(q.price)+" for the "+esc(q.name)+" plan</b><ol><li>Open M-Pesa and choose Pochi la Biashara.</li><li>Pay "+money(q.price)+" to <b>+254 726 960 303</b>.</li><li>Enter the M-Pesa confirmation code from your SMS below.</li><li>The developer checks the payment and approves it. "+(q.perm?"Your access never expires.":"Your time starts the first time you log in after approval.")+"</li></ol>"}
-function left(ms){var h=Math.floor(ms/36e5);return h<48?(h<1?"less than an hour":h+" hour"+(h==1?"":"s"))+" left":Math.floor(h/24)+" days left"}
-function planLine(u){if(u.role=="admin")return"Developer";if(u.lifetime)return"Permanent member (never expires)";if(u.active)return esc(planName(u.plan))+" plan · expires "+esc(new Date(u.expires).toLocaleString())+" ("+left(u.expires-Date.now())+")";return u.expires?"Your "+esc(planName(u.plan))+" plan ended "+esc(new Date(u.expires).toLocaleString()):"No active plan"}
-function renderAcct(offline){renderAcct0(offline);renderTabs()}
-function renderAcct0(offline){
+function renderAcct(offline){
  var b=document.getElementById("acctBody");
  if(offline){b.innerHTML='<p class="bad" style="margin:0">The sign-in server is not connected. Finish the Cloudflare setup in README.txt (D1 database and the ADMIN settings), then reload.</p>';return}
- if(ME){var u=ME,exp=u.role=="user"&&!u.active;
-  b.innerHTML='<div class="acct"><div class="av">'+esc((u.name||"?").charAt(0).toUpperCase())+'</div><div><b>'+esc(u.name)+"</b>"+(u.role=="admin"?'<span class="chip">Developer</span>':'<span class="chip">Member</span>')+'<br><span class="mid">'+esc(u.email)+"</span><br>"+planLine(u)+(u.pending?' <span class="tag mid">Payment awaiting approval</span>':"")+'</div><button class="alt" id="lo">Log out</button></div>'
-  +(exp?'<p class="note"><b>Your access has ended.</b> Choose a plan below to continue. Predictions stay locked until your payment is approved.</p>':"")
-  +(u.role=="user"&&!u.lifetime?'<details id="rn" class="card" '+(exp?"open":"")+'><summary>Renew or upgrade</summary><div class="pay" id="rpay" style="margin-top:10px">'+payBox("")+'</div><label for="rpl">Plan</label><select id="rpl">'+planOpts()+'</select><label for="rcd">M-Pesa confirmation code (10 characters)</label><input type="text" id="rcd" maxlength="10" autocapitalize="characters" autocomplete="off"><p style="margin:12px 0 0"><button id="rgo">Submit payment</button> <button class="alt" id="rref">I’ve been approved, refresh</button></p><div id="rmsg" class="bad" role="alert"></div></details>':"")
-  +'<div id="mypay"></div>';
-  document.getElementById("lo").onclick=async function(){await api("logout",{});location.reload()};
-  var rp=document.getElementById("rpl");
-  if(rp){rp.onchange=function(){document.getElementById("rpay").innerHTML=payBox(rp.value)};document.getElementById("rpay").innerHTML=payBox(rp.value);
-   document.getElementById("rgo").onclick=async function(){var m=document.getElementById("rmsg");m.textContent="";
-    var q=await api("renew",{plan:rp.value,code:document.getElementById("rcd").value.trim().toUpperCase()});
-    if(!q.ok){m.textContent=ERR[q.j.error]||"Could not send that. Try again.";return}
-    m.className="mid";m.textContent="Payment sent. The developer will approve it soon, then press refresh.";document.getElementById("rcd").value="";ME.pending=(ME.pending||0)+1;loadMyPay()};
-   document.getElementById("rref").onclick=async function(){var q=await api("me");if(q.ok){ME=q.j;await enter()}}}
-  if(u.role=="user")loadMyPay();
-  return}
- if(!PLANS.length){b.innerHTML='<p class="mid" style="margin:0">No plans are available right now. Please contact the developer on +254 726 960 303.</p>';return}
+ if(ME){b.innerHTML='<div class="acct"><div class="av">'+esc((ME.name||"?").charAt(0).toUpperCase())+'</div><div><b>'+esc(ME.name)+"</b>"+(ME.role=="admin"?'<span class="chip">Developer</span>':'<span class="chip">Member</span>')+'<br><span class="mid">'+esc(ME.email)+' · Predictions are chances, not guarantees.</span></div><button class="alt" id="lo">Log out</button></div>';
+  document.getElementById("lo").onclick=async function(){await api("logout",{});location.reload()};return}
  var reg=mode=="register";
- b.innerHTML=(reg?'<div class="pay" id="paybox">'+payBox("")+'</div>':'<div class="pay"><b>New here?</b> Choose Register, pick a plan (from '+money(Math.min.apply(null,PLANS.map(function(q){return q.price})))+'), pay by M-Pesa Pochi la Biashara to +254 726 960 303, and the developer approves you.</div>')
+ b.innerHTML='<div class="pay"><b>Registration fee: KSh 30 (one time)</b><ol><li>Open M-Pesa and choose Pochi la Biashara.</li><li>Pay KSh 30 to <b>+254 726 960 303</b>.</li><li>Register below with the M-Pesa confirmation code from your SMS.</li><li>The developer checks the payment and approves your account. Then you can log in and see predictions.</li></ol></div>'
  +'<div class="tabs" role="tablist"><button type="button" class="alt sm" id="tl" aria-pressed="'+(!reg)+'">Log in</button><button type="button" class="alt sm" id="tr" aria-pressed="'+reg+'">Register</button></div>'
  +(noteHtml?'<div class="note">'+noteHtml+"</div>":"")
- +'<form id="af" autocomplete="on">'+(reg?'<label for="upl">Plan</label><select id="upl">'+planOpts()+'</select><label for="un">Name</label><input type="text" id="un" autocomplete="name" required><label for="uh">WhatsApp phone number</label><input type="tel" id="uh" autocomplete="tel" placeholder="0712 345 678" required>':"")
+ +'<form id="af" autocomplete="on">'+(reg?'<label for="un">Name</label><input type="text" id="un" autocomplete="name" required><label for="uh">WhatsApp phone number</label><input type="tel" id="uh" autocomplete="tel" placeholder="0712 345 678" required>':"")
  +'<label for="ue">Email</label><input type="email" id="ue" autocomplete="email" required>'
  +'<label for="up">Password (8 or more characters)</label><input type="password" id="up" autocomplete="'+(reg?"new-password":"current-password")+'" minlength="8" required>'
  +(reg?'<label for="uc">M-Pesa confirmation code (10 characters)</label><input type="text" id="uc" maxlength="10" minlength="10" autocapitalize="characters" autocomplete="off" required>':"")
  +'<p style="margin:14px 0 0"><button type="submit">'+(reg?"Register":"Log in")+'</button> '+(reg?"":'<button type="button" class="alt" id="ck">Check my status</button>')+'</p><div id="am" role="alert" class="bad"></div></form>';
  document.getElementById("tl").onclick=function(){mode="login";noteHtml="";renderAcct()};
  document.getElementById("tr").onclick=function(){mode="register";noteHtml="";renderAcct()};
- if(reg){var pl=document.getElementById("upl");pl.onchange=function(){document.getElementById("paybox").innerHTML=payBox(pl.value)};document.getElementById("paybox").innerHTML=payBox(pl.value)}
  async function go(){var m=document.getElementById("am");m.textContent="";
-  var em=document.getElementById("ue").value.trim(),pw=document.getElementById("up").value,r,nm,cd,pid;
-  if(reg){nm=document.getElementById("un").value.trim();cd=document.getElementById("uc").value.trim().toUpperCase();pid=document.getElementById("upl").value;
-   r=await api("register",{name:nm,email:em,password:pw,code:cd,phone:document.getElementById("uh").value.trim(),plan:pid})}
+  var em=document.getElementById("ue").value.trim(),pw=document.getElementById("up").value,r,nm,cd;
+  if(reg){nm=document.getElementById("un").value.trim();cd=document.getElementById("uc").value.trim().toUpperCase();
+   r=await api("register",{name:nm,email:em,password:pw,code:cd,phone:document.getElementById("uh").value.trim()})}
   else r=await api("login",{email:em,password:pw});
-  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"",r.j.plan,r.j.amount)}else m.textContent=(ERR[e]||"Could not complete that. Try again.")+(e=="bad"&&r.j.admin_set===false?" Note for the developer: ADMIN_EMAIL and ADMIN_PASSWORD are not set on the server yet.":"");return}
-  if(reg){mode="login";noteHtml=statusHtml("registered",nm,cd,pid,(PLN[pid]||{}).price);renderAcct();return}
+  if(!r.ok){var e=r.j.error;if(e=="pending"||e=="rejected"){m.innerHTML=statusHtml(e,r.j.name||"",r.j.code||"")}else m.textContent=(ERR[e]||"Could not complete that. Try again.")+(e=="bad"&&r.j.admin_set===false?" Note for the developer: ADMIN_EMAIL and ADMIN_PASSWORD are not set on the server yet.":"");return}
+  if(reg){mode="login";noteHtml=statusHtml("registered",nm,cd);renderAcct();return}
   ME=r.j;await enter()}
  document.getElementById("af").onsubmit=function(e){e.preventDefault();go()};
  var ck=document.getElementById("ck");if(ck)ck.onclick=function(){var f=document.getElementById("af");if(f.reportValidity())go()}
 }
-async function loadMyPay(){var el=document.getElementById("mypay");if(!el)return;var r=await api("mypayments");var it=r.ok&&r.j.items?r.j.items:[];
- el.innerHTML=it.length?'<details style="margin-top:10px"><summary>My payments</summary><table><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Code</th><th>Status</th></tr>'+it.map(function(x){return"<tr><td>"+esc(dstr(x.created))+"</td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td>"+esc(x.mpesa)+"</td><td>"+esc(x.status)+"</td></tr>"}).join("")+"</table></details>":""}
-function dstr(t){return t?new Date(t).toLocaleString():"-"}
 async function enter(){
- renderAcct();
- if(ME.role=="user"&&!ME.active){document.getElementById("app").hidden=true;return}
- var r=await api("data");if(r.ok&&r.j&&typeof r.j=="object"){D=r.j;build()}
- document.getElementById("app").hidden=false;var h0=(location.hash||"").slice(1);if(TABS.some(function(t){return t[0]==h0})&&(h0!="admin"||ME.role=="admin"))TAB=h0;renderTabs();SNAP=null;document.getElementById("dt").value=ld(new Date());await loadDay();loadLive();if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden)loadLive()},60000);await loadSaves();devPanel();if(TAB=="leagues")renderLeagues()
+ renderAcct();document.getElementById("app").hidden=false;
+ var dt=document.getElementById("dt");if(!dt.value)dt.value=ld(new Date());
+ await loadWatch();loadGames();loadRecord();
+ if(!window.__lv)window.__lv=setInterval(function(){if(!document.hidden&&needsRefresh())loadGames(true)},60000);
+ await loadSaves();devPanel()
 }
 async function loadSaves(){var r=await api("saves");saves=r.ok&&r.j.items?r.j.items:[];renderMine()}
 async function saveLast(){
  var m=document.getElementById("svm");if(!last)return;
  var r=await api("save",last);m.textContent=r.ok?"Saved to your account.":"Could not save. Log in again.";if(r.ok)loadSaves()
 }
-function renderMine(){renderTabs();
+function renderMine(){
  var b=document.getElementById("mine");
  if(!saves.length){b.textContent="Run a prediction, then choose Save.";return}
  var h="<table><tr><th>Date</th><th>Match</th><th>Pick</th><th>H / D / A</th><th>Double chance</th><th>GG</th><th>O2.5</th><th></th></tr>";
@@ -425,365 +362,72 @@ function renderMine(){renderTabs();
  b.innerHTML=h+"</table>";
  b.querySelectorAll("button[data-i]").forEach(function(x){x.onclick=async function(){await api("saves?id="+x.dataset.i,null,"DELETE");loadSaves()}})
 }
-function tplMsg(k,u){var n=u.name,c=u.mpesa,pn=planName(u.plan),a=money(u.amount);
- return k=="approved"?"Hi "+n+", we've received your "+a+" (code "+c+"). Your "+pn+" access is approved. Log in here: "+location.origin+". "+(u.plan=="life"?"It never expires.":"Your time starts the first time you log in."):
+function tplMsg(k,u){var n=u.name,c=u.mpesa;
+ return k=="approved"?"Hi "+n+", we've received your KSh 30 (code "+c+"). Your account is approved. Log in here: "+location.origin+". Welcome to Ettylinks Matchday Prediction Model.":
  k=="checking"?"Hi "+n+", we've got your registration but can't see payment "+c+" yet. M-Pesa can be slow, so please check again in 15 minutes. If your SMS shows it went through, reply with a screenshot.":
- k=="amount"?"Hi "+n+", payment "+c+" was not "+a+". The "+pn+" plan costs "+a+". Please send the balance to Pochi la Biashara +254 726 960 303 and reply with the new code.":
- k=="used"?"Hi "+n+", code "+c+" has already been used on another account. Please pay "+a+" to Pochi la Biashara +254 726 960 303 and register with your own code.":
- k=="remind"?"Hi "+n+", your "+pn+" access ends "+(u.expires?new Date(u.expires).toLocaleString():"soon")+". To keep going, log in at "+location.origin+", choose Renew, pay to Pochi la Biashara +254 726 960 303 and enter the M-Pesa code.":
+ k=="amount"?"Hi "+n+", payment "+c+" was not KSh 30. Registration is KSh 30. Please send the balance to Pochi la Biashara +254 726 960 303 and reply with the new code.":
+ k=="used"?"Hi "+n+", code "+c+" has already been used on another account. Please pay KSh 30 to Pochi la Biashara +254 726 960 303 and register with your own code.":
  "Hi "+n+", we couldn't find M-Pesa code "+c+". Check the SMS and send the 10-character code again, or reply here for help."}
-var RF="",RT="",UF="all",RPT=null;
-function uState(u){if(u.status=="pending")return"pending";if(u.status=="rejected")return"rejected";if(u.lifetime)return"permanent";return u.expires&&u.expires>Date.now()?"active":"expired"}
-function csvDown(name,rows){var t=rows.map(function(r){return r.map(function(c){return'"'+String(c==null?"":c).replace(/"/g,'""')+'"'}).join(",")}).join("\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
 async function devPanel(){
  var box=document.getElementById("dev"),body=document.getElementById("devBody");
  if(!ME||ME.role!="admin"){box.hidden=true;return}
- box.hidden=false;if(!RF)RF=ld(new Date(Date.now()-29*864e5));if(!RT)RT=ld(new Date());
- var r=await api("admin/report?from="+RF+"&to="+RT+"&tz="+(-new Date().getTimezoneOffset()));
- if(!r.ok){body.textContent="Could not load the report.";return}
- RPT=r.j;var S=r.j.summary,U=S.users,pend=r.j.pending,pays=r.j.payments,users=r.j.users;
- var pr=await api("admin/plans"),AP=pr.ok?pr.j.plans:[];
- function tile(t,v,sub){return"<div class='lvrow'><span class='mid'>"+t+"</span><br><span class='xg'>"+v+"</span>"+(sub?"<br><span class='mid'>"+sub+"</span>":"")+"</div>"}
- function menu(id,opts){return"<select data-s='"+id+"' aria-label='Message'>"+opts+"</select> <button class='alt sm' data-w='"+id+"'>WhatsApp</button>"}
- var payOpts="<option value='approved'>Approved</option><option value='checking'>Still checking</option><option value='amount'>Wrong amount</option><option value='used'>Code reused</option><option value='notfound'>Code not found</option>";
- var h="<div class='grid'>"+tile("Revenue ("+esc(RF)+" to "+esc(RT)+")",money(S.revenue),S.confirmed+" confirmed payments")+tile("Waiting for approval",S.pendingCount,money(S.pendingAmount))+tile("Active members",U.active,U.permanent+" permanent · "+U.expiringSoon+" expiring within 3 days")+tile("Expired / pending / total",U.expired+" / "+U.pending+" / "+U.total,U.rejected+" rejected")+"</div>";
- h+="<h2 style='margin-top:16px'>Payments waiting for approval</h2>"+(pend.length?"<table><tr><th>Person</th><th>Plan</th><th>Amount</th><th>M-Pesa code</th><th>Sent</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(x){return"<tr><td>"+esc(x.name||"removed user")+"<br><span class='mid'>"+esc(x.email||"")+" · "+esc(x.phone||"no phone")+"</span></td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td class='n'>"+esc(x.mpesa)+"</td><td>"+esc(dstr(x.created))+"</td><td><button class='sm' data-pc='"+x.id+"'>Approve</button> <button class='alt sm' data-pr='"+x.id+"'>Reject</button></td><td>"+menu("p"+x.id,payOpts)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nothing is waiting.</p>");
- h+="<h2 style='margin-top:16px'>Payments report</h2><div class='grid'><div><label for='rf'>From</label><input type='date' id='rf' value='"+esc(RF)+"'></div><div><label for='rt'>To</label><input type='date' id='rt' value='"+esc(RT)+"'></div></div><p><button id='rr'>Run report</button> <button class='alt' id='xp'>Export payments (CSV)</button> <button class='alt' id='xu'>Export users (CSV)</button></p>";
- var bp=Object.keys(S.byPlan);
- h+=bp.length?"<table><tr><th>Plan</th><th>Payments</th><th>Total</th></tr>"+bp.map(function(k){return"<tr><td>"+esc(planName(k))+"</td><td class='n'>"+S.byPlan[k].n+"</td><td class='n'>"+money(S.byPlan[k].sum)+"</td></tr>"}).join("")+"<tr><td><b>All plans</b></td><td class='n'>"+S.confirmed+"</td><td class='n'>"+money(S.revenue)+"</td></tr></table>":"<p class='mid'>No confirmed payments in this period.</p>";
- var dk=Object.keys(S.daily).sort().reverse();
- if(dk.length)h+="<h3 style='margin:12px 0 4px'>By day</h3><table><tr><th>Day</th><th>Payments</th><th>Total</th></tr>"+dk.map(function(k){return"<tr><td>"+esc(k)+"</td><td class='n'>"+S.daily[k].n+"</td><td class='n'>"+money(S.daily[k].sum)+"</td></tr>"}).join("")+"</table>";
- h+="<h3 style='margin:12px 0 4px'>All payments in this period ("+pays.length+")</h3>"+(pays.length?"<table><tr><th>Date</th><th>Person</th><th>Plan</th><th>Amount</th><th>Code</th><th>Status</th></tr>"+pays.map(function(x){return"<tr><td>"+esc(dstr(x.created))+"</td><td>"+esc(x.name||"removed user")+"<br><span class='mid'>"+esc(x.email||"")+"</span></td><td>"+esc(planName(x.plan))+"</td><td class='n'>"+money(x.amount)+"</td><td>"+esc(x.mpesa)+"</td><td>"+esc(x.status)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>None.</p>");
- var shown=users.filter(function(u){return UF=="all"||uState(u)==UF});
- h+="<h2 style='margin-top:16px'>Users report</h2><label for='uf'>Show</label><select id='uf'>"+["all","active","permanent","expired","pending","rejected"].map(function(k){return"<option value='"+k+"'"+(k==UF?" selected":"")+">"+k+"</option>"}).join("")+"</select>";
- h+=shown.length?"<table><tr><th>Person</th><th>Plan</th><th>Status</th><th>Expires</th><th>Last login</th><th>Saved</th><th>Actions</th></tr>"+shown.map(function(u){var st=uState(u);return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td>"+esc(u.plan?planName(u.plan):"-")+"</td><td>"+st+"</td><td>"+(u.lifetime?"never":esc(dstr(u.expires)))+"</td><td>"+esc(dstr(u.last_login))+"</td><td class='n'>"+u.n+"</td><td><select data-g='"+u.id+"' aria-label='Plan to give'>"+AP.map(function(q){return"<option value='"+q.id+"'>"+esc(q.name)+"</option>"}).join("")+"</select> <button class='sm' data-gv='"+u.id+"'>Give access</button> <button class='alt sm' data-rv='"+u.id+"'>Revoke</button> <button class='alt sm' data-d='"+u.id+"'>Remove</button> "+menu("u"+u.id,"<option value='remind'>Expiry reminder</option>")+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No users match.</p>";
- h+="<h2 style='margin-top:16px'>Plans and prices</h2><table><tr><th>Plan</th><th>Price (KSh)</th><th>On sale</th></tr>"+AP.map(function(q){return"<tr><td>"+esc(q.name)+"</td><td><input type='number' min='1' max='1000000' data-pp='"+q.id+"' value='"+q.price+"' aria-label='Price'></td><td><input type='checkbox' data-po='"+q.id+"'"+(q.on?" checked":"")+" aria-label='On sale'></td></tr>"}).join("")+"</table><p><button class='alt' id='ps'>Save prices</button> <span id='pm' class='mid'></span></p><p class='note'>New prices apply to new payments. Payments already sent keep the price they were made at.</p>";
- h+="<h2 style='margin-top:16px'>Data feed</h2><p><button class='alt' id='ft'>Test data feed</button></p><div id='fm' class='note'>Press the button to see exactly what football-data.org answers to your key.</div>";
- h+="<h2 style='margin-top:16px'>Update match data</h2><textarea id='dd' placeholder='Paste JSON for the leagues to add or replace, e.g. Europa League data (see templates/europa-conference-example.json). Use null to delete a league.'></textarea><p><button class='alt' id='ds'>Save data</button> <span id='dm' class='mid'></span></p><p class='note'>Approve only after you see the right amount and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
- body.innerHTML=h;
- function q(sel,fn){body.querySelectorAll(sel).forEach(fn)}
- q("button[data-pc]",function(x){x.onclick=async function(){await api("admin/payment",{id:+x.dataset.pc,decision:"confirm"});devPanel()}});
- q("button[data-pr]",function(x){x.onclick=async function(){await api("admin/payment",{id:+x.dataset.pr,decision:"reject"});devPanel()}});
- q("button[data-gv]",function(x){x.onclick=async function(){var s0=body.querySelector("select[data-g='"+x.dataset.gv+"']").value;await api("admin/grant",{id:+x.dataset.gv,plan:s0});devPanel()}});
- q("button[data-rv]",function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.rv,status:"rejected"});devPanel()}});
- q("button[data-d]",function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions? Payment records are kept.")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
- q("button[data-w]",function(x){x.onclick=function(){var id=x.dataset.w,k=body.querySelector("select[data-s='"+id+"']").value,o;
-  if(id[0]=="p"){var y=pend.filter(function(z){return z.id==id.slice(1)})[0];o=y&&{name:y.name,mpesa:y.mpesa,plan:y.plan,amount:y.amount,phone:y.phone}}
-  else{var y2=users.filter(function(z){return z.id==id.slice(1)})[0];o=y2&&{name:y2.name,mpesa:"",plan:y2.plan,amount:0,phone:y2.phone,expires:y2.expires}}
-  if(o&&o.phone)window.open(waLink(tplMsg(k,o),o.phone),"_blank","noopener")}});
- document.getElementById("rr").onclick=function(){var a=document.getElementById("rf").value,z=document.getElementById("rt").value;if(a&&z&&z>=a){RF=a;RT=z;devPanel()}};
- document.getElementById("uf").onchange=function(){UF=this.value;devPanel()};
- document.getElementById("xp").onclick=function(){csvDown("ettylinks-payments-"+RF+"-to-"+RT+".csv",[["date","name","email","phone","plan","amount_kes","mpesa_code","status"]].concat(pays.map(function(x){return[new Date(x.created).toISOString(),x.name,x.email,x.phone,planName(x.plan),x.amount,x.mpesa,x.status]})))};
- document.getElementById("xu").onclick=function(){csvDown("ettylinks-users.csv",[["name","email","phone","plan","state","expires","last_login","registered","saved_predictions"]].concat(users.map(function(u){return[u.name,u.email,u.phone,u.plan?planName(u.plan):"",uState(u),u.lifetime?"never":(u.expires?new Date(u.expires).toISOString():""),u.last_login?new Date(u.last_login).toISOString():"",new Date(u.created).toISOString(),u.n]}))) };
- document.getElementById("ps").onclick=async function(){var o={},m=document.getElementById("pm");body.querySelectorAll("input[data-pp]").forEach(function(i){o[i.dataset.pp]={price:+i.value,on:body.querySelector("input[data-po='"+i.dataset.pp+"']").checked}});
-  var z=await api("admin/plans",{plans:o});m.textContent=z.ok?"Prices saved.":"Could not save: use whole numbers above 0.";if(z.ok)loadPlans()};
- document.getElementById("ft").onclick=async function(){var m=document.getElementById("fm");m.textContent="Testing…";var z=await api("admin/feedtest");var j=z.j||{};
-  if(!z.ok){m.textContent="The test could not run. Log in again and retry.";return}
-  if(!j.has_key){m.textContent="The server has no FOOTBALL_DATA_KEY. Add it as a Secret on this Worker (Settings > Variables and Secrets, not Build) and redeploy.";return}
-  var hint=j.status==200?"The feed is working.":j.status==0?"The server could not reach football-data.org.":(j.status==400||j.status==401||j.status==403)?"The key was rejected or is not allowed. Re-copy the token from your football-data.org email, with no spaces, save it again and redeploy.":j.status==429?"Rate limited. Wait a minute and try again.":j.status>=500?"football-data.org is having trouble. Try later.":"Unexpected answer.";
-  m.textContent="Key found ("+j.key_length+" characters; tokens are usually 32). football-data.org answered HTTP "+j.status+(j.message?": "+j.message:"")+". "+hint};
- document.getElementById("ds").onclick=async function(){var m=document.getElementById("dm");try{var o=JSON.parse(document.getElementById("dd").value)}catch(e){m.textContent="That is not valid JSON.";return}
-  var z=await api("admin/data",{data:o});m.textContent=z.ok?"Data updated and merged. Reload to see it.":"Could not save: "+(z.j.error||"error")}
+ box.hidden=false;var r=await api("admin/users");if(!r.ok){body.textContent="Could not load users.";return}
+ var us=r.j.users||[],pend=us.filter(function(u){return u.status=="pending"}),rest=us.filter(function(u){return u.status!="pending"});
+ function dt(t){return new Date(t).toLocaleString()}
+ function wa(u){return"<select data-s='"+u.id+"' aria-label='Message'><option value='approved'>Approved</option><option value='checking'>Still checking</option><option value='amount'>Wrong amount</option><option value='used'>Code reused</option><option value='notfound'>Code not found</option></select> <button class='alt sm' data-w='"+u.id+"'>WhatsApp</button>"}
+ var h="<p><b>"+pend.length+"</b> waiting for approval · <b>"+us.length+"</b> accounts</p>";
+ h+="<h2>Pending payments</h2>"+(pend.length?"<table><tr><th>Person</th><th>M-Pesa code</th><th>Registered</th><th>Decide</th><th>Message</th></tr>"+pend.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+"</span></td><td class='n'>"+esc(u.mpesa)+"</td><td>"+esc(dt(u.created))+"</td><td><button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> <button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Reject</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>Nobody is waiting.</p>");
+ h+="<h2 style='margin-top:16px'>All other accounts</h2>"+(rest.length?"<table><tr><th>Person</th><th>Status</th><th>Saved</th><th>Decide</th><th>Message</th></tr>"+rest.map(function(u){return"<tr><td>"+esc(u.name)+"<br><span class='mid'>"+esc(u.email)+" · "+esc(u.phone||"no phone")+" · "+esc(u.mpesa)+"</span></td><td>"+esc(u.status)+"</td><td class='n'>"+u.n+"</td><td>"+(u.status=="approved"?"<button class='alt sm' data-a='rejected' data-u='"+u.id+"'>Revoke</button> ":"<button class='sm' data-a='approved' data-u='"+u.id+"'>Approve</button> ")+"<button class='alt sm' data-d='"+u.id+"'>Remove</button></td><td>"+wa(u)+"</td></tr>"}).join("")+"</table>":"<p class='mid'>No other accounts yet.</p>");
+ h+="<p class='note'>Match data now loads by itself from football-data.org. Check the feed on the match day card above.</p><p class='note'>Approve only after you see KSh 30 and the same M-Pesa code on your Pochi la Biashara statement or SMS. After approving, send the “Approved” WhatsApp message so the person knows.</p>";
+ h+=watchEditor();body.innerHTML=h;wireWatch();
+ body.querySelectorAll("button[data-a]").forEach(function(x){x.onclick=async function(){await api("admin/status",{id:+x.dataset.u,status:x.dataset.a});devPanel()}});
+ body.querySelectorAll("button[data-d]").forEach(function(x){x.onclick=async function(){if(confirm("Remove this account and its saved predictions?")){await api("admin/delete",{id:+x.dataset.d});devPanel()}}});
+ body.querySelectorAll("button[data-w]").forEach(function(x){x.onclick=function(){var u=us.filter(function(q){return q.id==x.dataset.w})[0],k=body.querySelector("select[data-s='"+x.dataset.w+"']").value;if(u&&u.phone)window.open(waLink(tplMsg(k,u),u.phone),"_blank","noopener")}});
 }
 async function init(){
- await loadPlans();
  var r=await api("me");
  if(r.ok&&r.j&&r.j.role){ME=r.j;await enter();return}
  if(r.status==401){renderAcct();return}
  renderAcct(true)
 }
-// Live and concluded games: server feed (football-data.org) plus the model's own scoring of finished games
-var CODE={PL:"EPL",PD:"LL",SA:"SA"},LIVE=null,LERR="";
-function nz(n){return String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g,"and").replace(/manchester/g,"man").replace(/nottingham/g,"nottm").replace(/\b(fc|afc|cf|ac|as|ssc|ud|rcd|cd|de|club|calcio|1909)\b/g,"").replace(/[^a-z0-9]+/g," ").trim()}
-function findTeam(k,names){var T=D[k].t,ns=names.map(nz).filter(Boolean),part=[];
- for(var ab in T){var d=nz(T[ab][0]);for(var i=0;i<ns.length;i++){if(ns[i]==d)return ab;if(ns[i].indexOf(d+" ")==0||d.indexOf(ns[i]+" ")==0)part.push(ab)}}
- var u=part.filter(function(x,i){return part.indexOf(x)==i});return u.length==1?u[0]:null}
-function mfor(k,ha,aa,ko){var h=info(k,ha,ko),a=info(k,aa,ko),l=lgAvg(k,ko);return{h:h,a:a,r:calc({hf:h.gf,hg:h.n,ha:h.ga,hp:h.form,hi:0,af:a.gf,ag:a.n,aa:a.ga,ap:a.form,ai:0,LH:l[0],LA:l[1],FH:h.fat,FA:a.fat,eh:h.elo,ea:a.elo},h.name,a.name)}}
-function liveProb(lh,la,f,gh,ga){var rh=lh*(1-f),ra=la*(1-f),h=0,d=0,a=0,bt=0,o=0,i,j;
- for(i=0;i<9;i++)for(j=0;j<9;j++){var p=P(i,rh)*P(j,ra),H=gh+i,A=ga+j;if(H>A)h+=p;else if(H==A)d+=p;else a+=p;if(H>0&&A>0)bt+=p;if(H+A>2)o+=p}
- var t=h+d+a;return{H:h/t,D:d/t,A:a/t,bt:bt/t,o:o/t}}
-function frac(m){var e;if(m.m!=null)e=m.m;else if(m.s=="PAUSED")e=45;else{e=(Date.now()-new Date(m.t))/6e4;if(e>62)e-=15}return Math.max(0,Math.min(e,90))/90}
-function evalGame(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",c=r.dc[0];return{act:act,res:r.key==act,dc:c.indexOf("1X")==0?act!="A":c.indexOf("X2")==0?act!="H":act!="D",bt:(r.bt>=0.5)==(hs>0&&as>0),ov:(r.o25>=0.5)==(hs+as>2)}}
-function mark(ok){return ok?'<span class="hit">✓<span class="sr"> hit</span></span>':'<span class="miss">✗<span class="sr"> miss</span></span>'}
-function teamsOf(m){var k=D[m.c]?m.c:CODE[m.c];if(!(k&&D[k]))return null;
- if(D[k].dyn){var x=String(m.hid),y=String(m.aid);return D[k].t[x]&&D[k].t[y]?{k:k,a:x,b:y}:null}
- var a=findTeam(k,[m.h,m.hn]),b=findTeam(k,[m.a,m.an]);return a&&b?{k:k,a:a,b:b}:null}
-function liveRow(m){
- var tm=teamsOf(m),gh=m.hs==null?0:m.hs,ga=m.as==null?0:m.as,f=frac(m),lab=m.m!=null?m.m+"’":m.s=="PAUSED"?"HT":"about "+Math.round(f*90)+"’";
- var h='<div class="lvrow"><b>'+esc(m.cn||"")+'</b> <span class="live">LIVE</span> '+lab+'<br><span class="xg">'+esc(m.h)+" "+gh+" – "+ga+" "+esc(m.a)+"</span>";
- if(tm){var md=mfor(tm.k,tm.a,tm.b,new Date(m.t)),r=md.r,lp=liveProb(r.lh,r.la,f,gh,ga),dl=Math.round((lp[r.key]-(r.key=="H"?r.h:r.key=="D"?r.d:r.a))*100);
-  h+="<table><tr><th></th><th>"+esc(m.h)+"</th><th>Draw</th><th>"+esc(m.a)+"</th></tr><tr><td>Before kick-off</td><td class='n'>"+pc(r.h)+"%</td><td class='n'>"+pc(r.d)+"%</td><td class='n'>"+pc(r.a)+"%</td></tr><tr><td>Live now</td><td class='n'>"+pc(lp.H)+"%</td><td class='n'>"+pc(lp.D)+"%</td><td class='n'>"+pc(lp.A)+"%</td></tr></table>"
-  +"<p style='margin:6px 0 0;font-size:14px'>Pre-match lean was <b>"+esc(r.side)+"</b> ("+pc(r.top)+"%). Its chance is now "+pc(lp[r.key])+"% ("+(dl>=0?"+":"")+dl+" points). Both teams to score: "+pc(lp.bt)+"%. Over 2.5 goals: "+pc(lp.o)+"%.</p>"}
- else h+='<p class="mid" style="margin:6px 0 0;font-size:14px">No model for this league in the data, so only the score is shown.</p>';
- return h+"</div>"}
-function finRow(g,T){
- var h='<div class="lvrow"><b>'+esc(g.cn||"")+'</b> <span class="mid">'+esc(g.when||"")+'</span><br><span class="xg">'+esc(g.h)+" "+g.hs+" – "+g.as+" "+esc(g.a)+"</span>";
- if(g.k&&g.ha){var md=mfor(g.k,g.ha,g.ba,g.ko),r=md.r,e=evalGame(r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++;
-  h+="<p style='margin:6px 0 0;font-size:14px'>Model before the game: <b>"+esc(r.side)+"</b> "+pc(r.top)+"% "+mark(e.res)+" · Double chance "+esc(r.dc[0].split(" ")[0])+" "+mark(e.dc)+" · BTTS "+((r.bt>=0.5)?"Yes":"No")+" "+mark(e.bt)+" · Over 2.5 "+((r.o25>=0.5)?"Yes":"No")+" "+mark(e.ov)+"</p>"}
- return h+"</div>"}
-async function loadLive(){var r=await api("live");if(r.ok&&r.j&&r.j.matches){LIVE=r.j;LERR="";LIVEN=r.j.matches.filter(function(m){return m.s=="IN_PLAY"||m.s=="PAUSED"}).length;if(DYN){var cs=[],add=false;r.j.matches.forEach(function(m){if(m.c&&cs.indexOf(m.c)<0&&(m.s=="IN_PLAY"||m.s=="PAUSED"||m.s=="FINISHED"))cs.push(m.c)});for(var i=0;i<cs.length;i++){if(!D[cs[i]]&&await ensureSeason(cs[i]))add=true}if(add)build()}}else{LIVE=null;LERR=(r.j&&r.j.error)||"error";LIVEN=0}renderLive();renderTabs()}
-function renderLive(){
- var b=document.getElementById("liveBody"),h="",T={n:0,res:0,dc:0,bt:0,ov:0},now=Date.now();
- if(LIVE){h+='<p class="mid" style="margin:0">Updated '+ht(new Date(LIVE.at))+(LIVE.stale?" (source busy, showing older data)":"")+'. Refreshes every minute while this page is open. On the free data plan, scores can be delayed.</p>';
-  var lv=LIVE.matches.filter(function(m){return(m.s=="IN_PLAY"||m.s=="PAUSED")&&inLG(m)}).sort(function(a,c){return new Date(a.t)-new Date(c.t)});
-  h+="<h2 style='margin-top:14px'>Live now</h2>"+(lv.length?lv.map(liveRow).join(""):"<p class='mid'>No games in play right now.</p>");
-  var fin=LIVE.matches.filter(function(m){return m.s=="FINISHED"&&m.hs!=null&&now-new Date(m.t)<1.5*864e5&&inLG(m)}).sort(function(a,c){return new Date(c.t)-new Date(a.t)});
-  h+="<h2 style='margin-top:14px'>Concluded games</h2>"+(fin.length?fin.map(function(m){var tm=teamsOf(m);return finRow({cn:m.cn,h:m.h,a:m.a,hs:m.hs,as:m.as,k:tm&&tm.k,ha:tm&&tm.a,ba:tm&&tm.b,ko:new Date(m.t),when:new Date(m.t).toLocaleString()},T)}).join(""):"<p class='mid'>No finished games in the last 36 hours.</p>")}
- else{h+='<p class="note" style="margin-top:0">'+(LERR=="no_key"?"The live feed is not connected yet. Add FOOTBALL_DATA_KEY in Cloudflare (see README.txt). Meanwhile this shows how the model scored the finished games saved in the data.":LERR=="rate"?"The data source is busy. Try again in a minute. Showing saved results.":"Live data is not available right now. Showing saved results.")+"</p>";
-  var all=[];Object.keys(D).forEach(function(k){if(LGF!="all"&&k!=LGF)return;R[k].forEach(function(g){all.push({cn:D[k].n,h:D[k].t[g.h][0],a:D[k].t[g.a][0],hs:g.x[0],as:g.x[1],k:k,ha:g.h,ba:g.a,ko:g.t,when:g.t.toLocaleString()})})});
-  all.sort(function(a,c){return c.ko-a.ko});
-  var shown=all.slice(0,6).map(function(g){return finRow(g,{n:0,res:0,dc:0,bt:0,ov:0})}).join("");
-  all.forEach(function(g){var e=evalGame(mfor(g.k,g.ha,g.ba,g.ko).r,g.hs,g.as);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++});
-  h+="<h2>Latest saved results</h2>"+shown}
- if(T.n){function q(x){return x+"/"+T.n+" ("+Math.round(100*x/T.n)+"%)"}
-  h+="<div class='note'><b>Model record on these concluded games:</b> result "+q(T.res)+" · double chance "+q(T.dc)+" · both teams to score "+q(T.bt)+" · over/under 2.5 "+q(T.ov)+". Each game is scored using only the data that existed before kick-off. A small sample like this says little, so judge the model over hundreds of games, not a handful.</div>"}
- h+='<p><button class="alt" id="lvr">Refresh now</button></p>';
- b.innerHTML=h;document.getElementById("lvr").onclick=loadLive
+// ---- Loading games and the track record
+function shiftDay(n){var d=new Date(document.getElementById("dt").value+"T12:00:00");d.setDate(d.getDate()+n);document.getElementById("dt").value=ld(d);RETRY=0;CUR=null;loadGames()}
+async function loadGames(silent){
+ var el=document.getElementById("dt"),d=el.value;if(!d)return;var my=++LOADING;
+ if(!silent){GERR="";document.getElementById("list").innerHTML='<p class="note">Loading games…</p>'}
+ var r=await api("games?date="+d+"&tz="+(-new Date(d+"T12:00:00").getTimezoneOffset()));
+ if(my!==LOADING)return;
+ if(r.status===401){location.reload();return}
+ if(r.ok&&r.j&&r.j.games&&!r.j.error){GM=r.j.games;PEND=r.j.pending||[];STALE=!!r.j.stale;GERR=""}
+ else{if(!silent||!GM.length){GM=[];PEND=[]}GERR=(r.j&&r.j.error)||"error";GDET=r.j&&r.j.error&&(r.j.status!=null||r.j.detail)?"HTTP "+(r.j.status||"none")+(r.j.detail?": "+r.j.detail:""):(r.status&&!(r.j&&r.j.error)?"HTTP "+r.status:"")}
+ list();
+ var fin=GM.filter(isDone).length;if(fin!==FINN){if(FINN>=0)loadRecord();FINN=fin}
+ if(CUR){var g=GM.filter(function(x){return x.id==CUR.id})[0];if(g&&(g.s!=CUR.s||g.hs!=CUR.hs||g.as!=CUR.as)){document.querySelectorAll("#list .fx").forEach(function(x){});pick(g)}else if(g)CUR=g}
+ clearTimeout(RT);if(PEND.length&&RETRY<6){RETRY++;RT=setTimeout(function(){loadGames(true)},20000)}else if(!PEND.length)RETRY=0
 }
-// Daily games from the data feed (server: football-data.org). Falls back to the saved snapshot.
-function addDays(d,n){var x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return ld(x)}
-function useDyn(){if(!DYN){SNAP=D;D={};DYN=true}}
-async function ensureSeason(c){
- if(D[c]&&D[c].dyn)return true;
- var r=await api("season?code="+encodeURIComponent(c));
- if(!r.ok||!r.j||!r.j.res)return false;
- var t={};Object.keys(r.j.teams||{}).forEach(function(id){t[id]=[r.j.teams[id],0,0,0]});
- D[c]={n:r.j.name||c,dyn:true,t:t,r:r.j.res.map(function(x){return x[0].slice(0,16)+" "+x[1]+" "+x[2]+" "+x[3]+" "+x[4]}),f:[]};return true
+function needsRefresh(){var d=document.getElementById("dt").value;return d==ld(new Date())||GM.some(isLive)}
+async function loadRecord(){
+ var b=document.getElementById("recBody"),days=document.getElementById("rp").value,r=await api("record?days="+days);
+ if(!r.ok||!r.j.rows){b.innerHTML='<p class="note" style="margin-top:0">Could not load the track record.</p>';return}
+ var rows=r.j.rows;
+ function sum(rs){var s={n:0,res:0,dc:0,bt:0,ov:0,sn:0,sr:0};rs.forEach(function(x){Object.keys(s).forEach(function(k){s[k]+=+x[k]||0})});return s}
+ function q(x,n){return n?x+"/"+n+" ("+Math.round(100*x/n)+"%)":"–"}
+ function cells(s){return'<td class="n">'+s.n+'</td><td class="n">'+q(s.res,s.n)+'</td><td class="n">'+q(s.dc,s.n)+'</td><td class="n">'+q(s.bt,s.n)+'</td><td class="n">'+q(s.ov,s.n)+'</td><td class="n">'+q(s.sr,s.sn)+"</td>"}
+ function tbl(src,title,sub){var rs=rows.filter(function(x){return x.src==src});if(!rs.length)return"";var names={},cs=[];
+  rs.forEach(function(x){if(!names[x.comp]){names[x.comp]=x.cn||x.comp;cs.push(x.comp)}});
+  return"<h2 style='margin-top:14px'>"+title+'</h2><p class="mid" style="margin:0 0 4px;font-size:14px">'+sub+"</p><div class='scroll'><table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th><th>Strong leans (55%+)</th></tr><tr><td><b>All</b></td>"+cells(sum(rs))+"</tr>"
+  +(cs.length>1?cs.map(function(c){return"<tr><td>"+esc(names[c])+"</td>"+cells(sum(rs.filter(function(x){return x.comp==c})))+"</tr>"}).join(""):"")+"</table></div>"}
+ var h=tbl("live","Called before kick-off","Saved ahead of the game, so the call could not have been shaped by the result.")+tbl("back","Re-run on past games","Opened after the game; uses only results from before kick-off, but was not saved in advance.");
+ b.innerHTML=h?h+'<p class="note">A random pick of the three results would be right about one time in three. These records get meaningful over hundreds of games, not a handful. Open any past date above to see each game as a hit or a miss.</p>':'<p class="note" style="margin-top:0">No finished games are recorded for this period yet. Predictions are saved before kick-off and scored when the game finishes. Open a past date above to score the model on older games.</p>'
 }
-async function loadDay(){
- var box=document.getElementById("list");box.innerHTML='<p class="note">Loading games…</p>';
- var d=document.getElementById("dt").value,r=await api("matches?from="+addDays(d,-1)+"&to="+addDays(d,1));
- if(!r.ok||!r.j||!r.j.matches){var e=r.j&&r.j.error;
-  MSG=e=="no_key"?"The live data feed is not connected yet (FOOTBALL_DATA_KEY, see README). Showing the saved snapshot.":e=="rate"?"The data source is busy. Try again in a minute."+(DYN?"":" Showing the saved snapshot."):"Could not load games right now (the data source returned an error"+(r.j&&r.j.status!=null?", HTTP "+r.j.status:"")+"). "+(ME&&ME.role=="admin"?"Use Test data feed in the Developer panel to see why.":"Try again shortly.")+(DYN?"":" Showing the saved snapshot.");
-  list();return}
- var ms=r.j.matches.filter(function(m){return m.h&&m.a&&m.c}),codes=[],failed=[];
- useDyn();
- ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
- for(var i=0;i<codes.length;i++){if(!D[codes[i]]&&!(await ensureSeason(codes[i])))failed.push(codes[i])}
- META={};Object.keys(D).forEach(function(k){if(!D[k].extra)D[k].f=[]});
- ms.forEach(function(m){var k=m.c;if(!D[k])return;if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];META[m.id]={s:m.s,hs:m.hs,as:m.as,m:m.m,cn:m.cn};D[k].f.push(m.t.slice(0,16)+" "+m.h+" "+m.a+" 0 0 0 "+m.id)});
- Object.keys(SNAP||{}).forEach(function(k){if(SNAP[k]&&SNAP[k].extra&&SNAP[k].f&&SNAP[k].f.length&&!D[k])D[k]=SNAP[k]});
- if(!Object.keys(D).length&&SNAP){D=SNAP;DYN=false;SNAP=null;MSG="The data source is busy. Showing the saved snapshot."}
- else MSG=failed.length?"Some leagues are still loading because the data source limits requests. Retrying automatically in a minute.":"";
- build();clearTimeout(RETRY);if(failed.length)RETRY=setTimeout(loadDay,65000);
- list()
-}
-var HM=null,HLOAD=false;
-function histDefaults(){var f=document.getElementById("hf"),t=document.getElementById("ht");if(!t.value)t.value=ld(new Date());if(!f.value)f.value=ld(new Date(Date.now()-6*864e5))}
-function histPreset(daysBack,single){var t=ld(new Date(single?Date.now()-daysBack*864e5:Date.now())),f=single?t:ld(new Date(Date.now()-daysBack*864e5));document.getElementById("hf").value=f;document.getElementById("ht").value=t;runHistory()}
-async function runHistory(){
- var b=document.getElementById("histBody"),today=ld(new Date());histDefaults();
- var f=document.getElementById("hf").value,t=document.getElementById("ht").value;
- if(f>t){var x=f;f=t;t=x}
- if(t>today)t=today;if(f>t)f=t;
- document.getElementById("hf").value=f;document.getElementById("ht").value=t;
- if((Date.parse(t)-Date.parse(f))/864e5>59){b.textContent="Please choose 60 days or fewer at a time.";return}
- b.textContent="Loading…";
- var all=[],failed=0,s0=addDays(f,-1),end=addDays(t,1);
- while(s0<=end){var e0=addDays(s0,9);if(e0>end)e0=end;
-  var r=await api("matches?from="+s0+"&to="+e0);
-  if(!r.ok||!r.j||!r.j.matches){if(r.j&&r.j.error=="no_key"){b.textContent="Connect the data feed first (FOOTBALL_DATA_KEY, see README).";return}failed++}
-  else all=all.concat(r.j.matches);
-  s0=addDays(e0,1)}
- if(!all.length&&failed){b.textContent="Could not load past games right now. Try again in a minute.";return}
- var seen={},ms=all.filter(function(m){if(seen[m.id])return false;seen[m.id]=1;var d=ld(new Date(m.t));return d>=f&&d<=t&&m.s=="FINISHED"&&m.hs!=null&&m.as!=null&&m.h&&m.a&&m.c}),codes=[];
- useDyn();ms.forEach(function(m){if(codes.indexOf(m.c)<0)codes.push(m.c)});
- for(var i=0;i<codes.length;i++){if(!D[codes[i]])await ensureSeason(codes[i])}
- build();HM={f:f,t:t,ms:ms,failed:failed};drawHistory()
-}
-function drawHistory(){
- var b=document.getElementById("histBody");if(!HM)return;
- var show=document.getElementById("hs").value||"all",rows=[],L={},A={n:0,res:0,dc:0,bt:0,ov:0},days={},skipped=0;REL={dc:[],w:[],b:[]};
- var ms=HM.ms.filter(function(m){return LGF=="all"||m.c==LGF}).sort(function(x,y){return new Date(y.t)-new Date(x.t)});
- ms.forEach(function(m){var k=m.c;if(!D[k]){skipped++;return}
-  if(!D[k].t[m.h])D[k].t[m.h]=[m.hn,0,0,0];if(!D[k].t[m.a])D[k].t[m.a]=[m.an,0,0,0];
-  var md=mfor(k,String(m.h),String(m.a),new Date(m.t)),e=evalGame(md.r,m.hs,m.as),dk=ld(new Date(m.t)),q=L[k]||(L[k]={n:D[k].n,t:{n:0,res:0,dc:0,bt:0,ov:0}}),dd=days[dk]||(days[dk]={n:0,res:0,dc:0,bt:0,ov:0});
-  rel(md.r,m.hs,m.as);[q.t,A,dd].forEach(function(o){o.n++;if(e.res)o.res++;if(e.dc)o.dc++;if(e.bt)o.bt++;if(e.ov)o.ov++});
-  if((show=="hit"&&!e.res)||(show=="miss"&&e.res))return;
-  rows.push("<tr class='gr'><td>"+esc(new Date(m.t).toLocaleDateString())+"</td><td>"+esc(m.hn)+" "+m.hs+"–"+m.as+" "+esc(m.an)+"<br><span class='mid'>"+esc(D[k].n)+"</span></td><td>"+esc(md.r.side)+" "+pc(md.r.top)+"%</td><td>"+mark(e.res)+"</td><td>"+mark(e.dc)+"</td><td>"+mark(e.bt)+"</td><td>"+mark(e.ov)+"</td></tr>")});
- function pct(x,n){return n?Math.round(100*x/n)+"% ("+x+"/"+n+")":"-"}
- function line(nm,o){return"<tr><td>"+esc(nm)+"</td><td class='n'>"+o.n+"</td><td class='n'>"+pct(o.res,o.n)+"</td><td class='n'>"+pct(o.dc,o.n)+"</td><td class='n'>"+pct(o.bt,o.n)+"</td><td class='n'>"+pct(o.ov,o.n)+"</td></tr>"}
- var head="<p class='mid' style='margin:0 0 6px'>"+esc(HM.f)+" to "+esc(HM.t)+(LGF!="all"&&D[LGF]?" · "+esc(D[LGF].n):" · all leagues")+" · "+A.n+" finished game"+(A.n==1?"":"s")+" predicted with only the data from before kick-off.</p>";
- if(!A.n){b.innerHTML=head+"<p class='note'>No finished games with data in this period"+(LGF!="all"?" for this league. Try All leagues":"")+".</p>";return}
- var dk=Object.keys(days).sort().reverse();
- b.innerHTML=head+"<table><tr><th>League</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+Object.keys(L).map(function(k){return line(L[k].n,L[k].t)}).join("")+line("All leagues",A)+"</table>"
- +"<h3 style='margin:12px 0 4px'>Day by day</h3><table><tr><th>Day</th><th>Games</th><th>Result</th><th>Double chance</th><th>Both teams score</th><th>Over/under 2.5</th></tr>"+dk.map(function(d){return line(d,days[d])}).join("")+"</table>"
- +relHtml()+"<h2 style='margin-top:16px'>Game by game"+(show=="hit"?" (result called right)":show=="miss"?" (result called wrong)":"")+"</h2><table><tr><th>Date</th><th>Match</th><th>Model pick</th><th>Result</th><th>Double chance</th><th>GG</th><th>O/U 2.5</th></tr>"+rows.slice(0,150).join("")+"</table>"+(rows.length>150?"<p class='mid'>Showing the first 150 of "+rows.length+" games. Narrow the dates to see the rest.</p>":"")
- +'<p class="note">✓ = the model called it, ✗ = it did not. Each game was predicted using only results from before kick-off, so this is an honest record, not hindsight.'+(skipped?" "+skipped+" games skipped (league data not loaded).":"")+(HM.failed?" Some days could not load because the data source was busy, so totals may be incomplete.":"")+" Judge the model over hundreds of games, not a few days.</p>"
-}
-document.getElementById("hs").onchange=drawHistory;
-document.getElementById("hp0").onclick=function(){histPreset(0,true)};
-document.getElementById("hp1").onclick=function(){histPreset(1,true)};
-document.getElementById("hp7").onclick=function(){histPreset(6,false)};
-document.getElementById("hp30").onclick=function(){histPreset(29,false)};
-// Confidence picks, reliability check and the Claude second opinion
-var STR={bal:{dc:70,w:50,b:58},strict:{dc:78,w:58,b:64},vs:{dc:85,w:65,b:70}};
-function tierOf(p,a,b){return p>=a?["Banker","good"]:p>=b?["Strong","mid"]:["Good","mid"]}
-function renderPicks(){
- var box=document.getElementById("picksBody");if(!box)return;
- var d=document.getElementById("dt").value,L=STR[document.getElementById("pk").value]||STR.bal,dc=[],w=[],bt=[],thin=0,n=0;
- ALL.filter(function(g){return ld(g.t)==d&&(LGF=="all"||g.k==LGF)}).forEach(function(g){
-  var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
-  var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h.name,A=md.a.name,tag=ht(g.t)+" · "+H+" v "+A,lg=D[g.k].n;n++;
-  if(Math.min(md.h.n,md.a.n)<4&&!(md.h.elo&&md.a.elo)){thin++;return}
-  var p1=r.h+r.d,p2=r.d+r.a,p12=r.h+r.a,dcp=Math.max(p1,p2,p12)*100,dcl=(p12>=p1&&p12>=p2)?"12 (either team wins, no draw)":(p1>=p2?"1X ("+H+" or draw)":"X2 ("+A+" or draw)");
-  if(dcp>=L.dc)dc.push([dcp,tag,dcl,lg,tierOf(dcp,85,78)]);
-  if(r.key!="D"&&r.top*100>=L.w)w.push([r.top*100,tag,(r.key=="H"?H:A)+" to win",lg,tierOf(r.top*100,65,58)]);
-  var by=r.bt>=0.5,bp=(by?r.bt:1-r.bt)*100;if(bp>=L.b)bt.push([bp,tag,"Both teams to score: "+(by?"Yes":"No"),lg,tierOf(bp,70,64)])});
- function sec(t,arr){arr.sort(function(x,y){return y[0]-x[0]});
-  return"<h3 class='lgh' style='grid-column:auto'>"+t+" ("+arr.length+")</h3>"+(arr.length?arr.map(function(x){return"<div class='lvrow'><b>"+esc(x[1])+"</b> <span class='mid'>"+esc(x[3])+"</span><br>"+esc(x[2])+" — <b>"+Math.round(x[0])+"%</b> <span class='tag "+x[4][1]+"'>"+x[4][0]+"</span></div>"}).join(""):"<p class='mid'>No games meet this level.</p>")}
- if(!n){box.innerHTML="<p class='mid'>No upcoming games on this date.</p>";return}
- box.innerHTML=sec("Double chance (1X / 12 / X2)",dc)+sec("Favourite to win",w)+sec("Both teams to score",bt)
- +'<p class="note">'+(thin?thin+" game"+(thin>1?"s were":" was")+" left out because a team has too little data yet. ":"")+'Percentages are the model’s own estimates. Check the reliability table under “Past results and model record” to see whether they have held up. Combining many picks into one bet cuts your chance of winning sharply, so only stake what you can afford to lose.</p>'
-}
-function rel(r,hs,as){var act=hs>as?"H":hs==as?"D":"A",p1=r.h+r.d,p2=r.d+r.a;
- if(p1>=p2)REL.dc.push([p1,act!="A"]);else REL.dc.push([p2,act!="H"]);
- if(r.key!="D")REL.w.push([r.top,act==r.key]);
- var by=r.bt>=0.5;REL.b.push([by?r.bt:1-r.bt,by==(hs>0&&as>0)])}
-function relTable(title,arr,edges){
- var rows=edges.map(function(lo,i){var hi=edges[i+1]||101,xs=arr.filter(function(x){var q=x[0]*100;return q>=lo&&q<hi}),n=xs.length,k=xs.filter(function(x){return x[1]}).length;
-  return n?"<tr><td>"+lo+(hi>100?"% or more":"–"+hi+"%")+"</td><td class='n'>"+n+"</td><td class='n'>"+Math.round(100*k/n)+"%</td></tr>":""}).join("");
- return rows?"<h3 style='margin:12px 0 4px'>"+title+"</h3><table><tr><th>Model said</th><th>Games</th><th>Actually right</th></tr>"+rows+"</table>":""}
-function relHtml(){return"<h2 style='margin-top:16px'>Does the confidence mean anything?</h2><p class='mid' style='margin:0'>If the model is well calibrated, “Actually right” should be close to what it said. Small counts are noisy.</p>"+relTable("Double chance picks (1X / X2)",REL.dc,[50,60,70,80,90])+relTable("Favourite to win",REL.w,[40,50,60,70])+relTable("Both teams to score (model’s better side)",REL.b,[50,58,65,72])}
-function AICTX(){var R0=LASTR.r;
- function fm(x){return x?{rank:x.rank||null,points:x.pts,played:x.gp,goalsFor:x.gf,goalsAgainst:x.ga,formPointsPer5:+x.form.toFixed(1),recent:x.lines,flags:x.flags,next:x.next,rating:x.elo||null}:null}
- return{league:last?last.l:"",date:last?last.d:"",home:LASTR.hn,away:LASTR.an,
-  model:{homeWinPct:pc(R0.h),drawPct:pc(R0.d),awayWinPct:pc(R0.a),doubleChance:R0.dc[0]+" "+pc(R0.dc[1])+"%",bttsYesPct:pc(R0.bt),over25Pct:pc(R0.o25),expectedGoals:[+R0.lh.toFixed(2),+R0.la.toFixed(2)]},
-  homeForm:fm(CTXD&&CTXD.h),awayForm:fm(CTXD&&CTXD.a),missingKeyPlayersPct:{home:v("hi"),away:v("ai")},
-  note:"Model uses goals and form from this season's results only. No injury or line-up data unless stated."}}
-async function askAI(){
- var b=document.getElementById("aib");if(!LASTR)return;b.textContent="Asking Claude…";
- var r=await api("ai",{ctx:AICTX()}),j=r.j||{};
- if(!r.ok){var e=j.error,adm=ME&&ME.role=="admin";
-  b.innerHTML='<p class="note">'+esc(e=="no_ai_key"?"Claude second opinions are not switched on yet. The developer must add ANTHROPIC_API_KEY (see README).":e=="user_limit"?"You have used today’s "+j.limit+" Claude checks. Try again tomorrow.":e=="site_limit"?"The site’s daily Claude limit is used up. Try again tomorrow.":"Claude could not be reached right now. Try again shortly."+(adm&&j.status?" (HTTP "+j.status+(j.message?": "+j.message:"")+")":""))+"</p>";return}
- var cls=j.stance=="agree"?"good":j.stance=="disagree"?"bad":"mid",lab=j.stance=="agree"?"Claude agrees":j.stance=="disagree"?"Claude disagrees":"Claude says be careful";
- b.innerHTML='<div class="lvrow"><span class="tag '+cls+'">'+lab+'</span> <span class="mid">confidence: '+esc(j.confidence)+(j.cached?" · saved answer":"")+'</span><p style="margin:8px 0 0">'+esc(j.summary)+"</p>"+(j.risks&&j.risks.length?"<ul style='margin:6px 0 0 18px;padding:0'>"+j.risks.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul>":"")+'<p class="mid" style="margin:8px 0 0;font-size:13px">AI commentary on the model’s numbers, not a guarantee. Claude cannot see line-ups or injuries unless you enter them.</p></div>'
-}
-// Tabs, filters, league analysis and side-by-side match analysis
-var TAB="games",LGF="all",STF="all",QF="",LIVEN=0;
-var TABS=[["games","Games"],["picks","Picks"],["live","Live"],["analysis","Analysis"],["leagues","Leagues"],["record","Record"],["saved","Saved"],["account","Account"],["admin","Admin"]];
-function tabMode(){return!!(ME&&(ME.role=="admin"||ME.active))}
-function renderTabs(){
- var nav=document.getElementById("tabs"),fb=document.getElementById("fbar");
- if(!tabMode()){nav.hidden=true;fb.hidden=true;document.querySelectorAll("[data-tab]").forEach(function(x){x.classList.remove("off")});return}
- nav.hidden=false;
- nav.innerHTML=TABS.filter(function(t){return t[0]!="admin"||ME.role=="admin"}).map(function(t){var lab=t[1]+(t[0]=="live"&&LIVEN?" ("+LIVEN+")":"")+(t[0]=="saved"&&saves.length?" ("+saves.length+")":"");return'<button type="button" class="alt" role="tab" data-t="'+t[0]+'" aria-selected="'+(t[0]==TAB)+'">'+esc(lab)+"</button>"}).join("");
- nav.querySelectorAll("button").forEach(function(x){x.onclick=function(){showTab(x.dataset.t)}});
- document.querySelectorAll("[data-tab]").forEach(function(x){x.classList.toggle("off",x.dataset.tab!=TAB)});
- var g=TAB=="games",pk=TAB=="picks";
- fb.hidden=!(g||pk||TAB=="live"||TAB=="leagues"||TAB=="record");
- document.getElementById("fdw").hidden=!(g||pk);document.getElementById("fsw").hidden=!g;document.getElementById("fqw").hidden=!g;
-}
-function showTab(t){TAB=t;renderTabs();try{history.replaceState(null,"","#"+t)}catch(e){}if(t=="leagues")renderLeagues();if(t=="record"){histDefaults();if(!HM&&!HLOAD){HLOAD=true;runHistory()}}if(window.scrollTo)window.scrollTo(0,0)}
-function lgOpts(){var sel=document.getElementById("fl"),ks=Object.keys(D).filter(function(k){return D[k]&&D[k].n}).sort(function(a,b){return D[a].n<D[b].n?-1:1});
- sel.innerHTML='<option value="all">All leagues</option>'+ks.map(function(k){return'<option value="'+esc(k)+'">'+esc(D[k].n)+"</option>"}).join("");
- if(LGF!="all"&&!D[LGF])LGF="all";sel.value=LGF}
-function gStatus(g){var mt=META[g.x[3]];return mt?(mt.s=="FINISHED"?"fin":(mt.s=="IN_PLAY"||mt.s=="PAUSED")?"live":"up"):"up"}
-function gFilter(g){if(LGF!="all"&&g.k!=LGF)return false;if(STF!="all"&&gStatus(g)!=STF)return false;
- if(QF){var q=QF.toLowerCase();if(((D[g.k].t[g.h]||["?"])[0]+" "+(D[g.k].t[g.a]||["?"])[0]).toLowerCase().indexOf(q)<0)return false}return true}
-function inLG(m){if(LGF=="all")return true;var k=D[m.c]?m.c:CODE[m.c];return k==LGF}
-function refreshViews(){list();renderLive();if(TAB=="leagues")renderLeagues();if(HM)drawHistory()}
-// side-by-side comparison and earlier meetings, shown under the match analysis
-function sbs(){
- if(!CTXD||!LK||!D[LK])return"";var h=CTXD.h,a=CTXD.a;
- function f5(i){return i.lines.slice(-5).map(function(x){return x.charAt(0)}).join(" ")||"-"}
- function ppg(i){return i.gp?(i.pts/i.gp).toFixed(2):"-"}
- function gpg(x,i){return i.n?(x/i.n).toFixed(2):"-"}
- var rows=[["League position",h.rank||"-",a.rank||"-"],["Played",h.gp,a.gp],["Points per game",ppg(h),ppg(a)],["Goals scored per game",gpg(h.gf,h),gpg(a.gf,a)],["Goals conceded per game",gpg(h.ga,h),gpg(a.ga,a)],["Last results (oldest first)",f5(h),f5(a)],["Rating (if known)",h.elo||"-",a.elo||"-"],["Rest / fixture flags",h.flags.length?h.flags.join("; "):"none",a.flags.length?a.flags.join("; "):"none"]];
- var meet=R[LK].filter(function(g){return g.t<CTXD.ko&&((g.h==CTXD.ha&&g.a==CTXD.aa)||(g.h==CTXD.aa&&g.a==CTXD.ha))}).sort(function(x,y){return x.t-y.t}).map(function(g){return esc((D[LK].t[g.h]||["?"])[0])+" "+g.x[0]+"–"+g.x[1]+" "+esc((D[LK].t[g.a]||["?"])[0])+" ("+esc(ld(g.t))+")"});
- return"<h3 style='margin:12px 0 4px'>Side by side</h3><div class='scroll'><table><tr><th></th><th>"+esc(h.name)+"</th><th>"+esc(a.name)+"</th></tr>"+rows.map(function(r){return"<tr><td>"+r[0]+"</td><td class='n'>"+esc(r[1])+"</td><td class='n'>"+esc(r[2])+"</td></tr>"}).join("")+"</table></div><p style='margin:8px 0 0;font-size:14px'><b>Earlier meetings in the loaded results:</b> "+(meet.length?meet.join("; "):"none")+".</p>"}
-// league analysis
-function pctf(x,n){return n?Math.round(100*x/n)+"%":"-"}
-function lgStats(k){
- var T={},n=0,H=0,Dw=0,A=0,bt=0,ov=0,goals=0;
- function tm(id){return T[id]||(T[id]={id:id,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,f:[],bt:0,ov:0,cs:0})}
- R[k].slice().sort(function(a,b){return a.t-b.t}).forEach(function(g){var x=g.x[0],y=g.x[1],a=tm(g.h),b=tm(g.a);n++;goals+=x+y;if(x>y)H++;else if(x==y)Dw++;else A++;if(x>0&&y>0){bt++;a.bt++;b.bt++}if(x+y>2){ov++;a.ov++;b.ov++}
-  a.p++;b.p++;a.gf+=x;a.ga+=y;b.gf+=y;b.ga+=x;if(y==0)a.cs++;if(x==0)b.cs++;
-  if(x>y){a.w++;b.l++;a.pts+=3;a.f.push("W");b.f.push("L")}else if(x==y){a.d++;b.d++;a.pts++;b.pts++;a.f.push("D");b.f.push("D")}else{b.w++;a.l++;b.pts+=3;a.f.push("L");b.f.push("W")}});
- var rows=Object.keys(T).map(function(id){return T[id]}).sort(function(a,b){return b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf});
- return{n:n,H:H,D:Dw,A:A,bt:bt,ov:ov,goals:goals,rows:rows}}
-function renderLeagues(){
- var b=document.getElementById("lgsBody");if(!b)return;
- var keys=Object.keys(D).filter(function(k){return R[k]&&R[k].length});
- if(!keys.length){b.innerHTML="<p class='mid'>No results are loaded yet, so there is nothing to analyse.</p>";return}
- if(LGF=="all"||!R[LGF]||!R[LGF].length){
-  b.innerHTML="<p class='mid' style='margin:0 0 6px'>Overview of every loaded league. Choose one in the League filter above for its table, trends and how the model has done there.</p><div class='scroll'><table><tr><th>League</th><th>Games</th><th>Goals/game</th><th>Home</th><th>Draw</th><th>Away</th><th>BTTS</th><th>Over 2.5</th></tr>"+keys.map(function(k){var s=lgStats(k);return"<tr><td>"+esc(D[k].n)+"</td><td class='n'>"+s.n+"</td><td class='n'>"+(s.goals/s.n).toFixed(2)+"</td><td class='n'>"+pctf(s.H,s.n)+"</td><td class='n'>"+pctf(s.D,s.n)+"</td><td class='n'>"+pctf(s.A,s.n)+"</td><td class='n'>"+pctf(s.bt,s.n)+"</td><td class='n'>"+pctf(s.ov,s.n)+"</td></tr>"}).join("")+"</table></div>";return}
- var k=LGF,s=lgStats(k);function nm(id){return(D[k].t[id]||["?"])[0]}
- function tile(t,v){return"<div class='lvrow'><span class='mid'>"+t+"</span><br><span class='xg'>"+v+"</span></div>"}
- var h="<h3 style='margin:0'>"+esc(D[k].n)+"</h3><div class='tiles'>"+tile("Games played",s.n)+tile("Goals per game",(s.goals/s.n).toFixed(2))+tile("Home wins",pctf(s.H,s.n))+tile("Draws",pctf(s.D,s.n))+tile("Away wins",pctf(s.A,s.n))+tile("Both teams scored",pctf(s.bt,s.n))+tile("Over 2.5 goals",pctf(s.ov,s.n))+"</div>";
- h+="<h3 style='margin:12px 0 4px'>Table (from the loaded results)</h3><div class='scroll'><table><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Last 5</th></tr>"+s.rows.slice(0,40).map(function(r,i){return"<tr><td class='n'>"+(i+1)+"</td><td>"+esc(nm(r.id))+"</td><td class='n'>"+r.p+"</td><td class='n'>"+r.w+"</td><td class='n'>"+r.d+"</td><td class='n'>"+r.l+"</td><td class='n'>"+r.gf+"</td><td class='n'>"+r.ga+"</td><td class='n'>"+(r.gf-r.ga)+"</td><td class='n'><b>"+r.pts+"</b></td><td>"+r.f.slice(-5).join(" ")+"</td></tr>"}).join("")+"</table></div>";
- function top(label,fn,minP,fmt,desc){var a=s.rows.filter(function(r){return r.p>=minP}).sort(function(x,y){return desc?fn(y)-fn(x):fn(x)-fn(y)}).slice(0,3);return a.length?"<p style='margin:4px 0;font-size:14px'><b>"+label+":</b> "+a.map(function(r){return esc(nm(r.id))+" ("+fmt(r)+")"}).join(", ")+"</p>":""}
- h+="<h3 style='margin:12px 0 4px'>Trends</h3>"+top("Best attack",function(r){return r.gf/r.p},3,function(r){return(r.gf/r.p).toFixed(2)+" goals a game"},true)+top("Best defence",function(r){return r.ga/r.p},3,function(r){return(r.ga/r.p).toFixed(2)+" conceded a game"},false)+top("Both teams score most often",function(r){return r.bt/r.p},4,function(r){return Math.round(100*r.bt/r.p)+"%"},true)+top("Over 2.5 goals most often",function(r){return r.ov/r.p},4,function(r){return Math.round(100*r.ov/r.p)+"%"},true)+top("Most clean sheets",function(r){return r.cs/r.p},4,function(r){return r.cs+" in "+r.p},true);
- // how the model has done in this league (each game predicted with data from before kick-off)
- var past=R[k].slice().sort(function(a,b){return b.t-a.t}).slice(0,40),T={n:0,res:0,dc:0,bt:0,ov:0};
- past.forEach(function(g){try{var e=evalGame(mfor(k,g.h,g.a,g.t).r,g.x[0],g.x[1]);T.n++;if(e.res)T.res++;if(e.dc)T.dc++;if(e.bt)T.bt++;if(e.ov)T.ov++}catch(x){}});
- h+="<h3 style='margin:12px 0 4px'>How the model has done here</h3>"+(T.n>=5?"<p style='margin:0;font-size:14px'>Last "+T.n+" finished games, each predicted with only the data from before kick-off: result right "+pctf(T.res,T.n)+" · double chance "+pctf(T.dc,T.n)+" · both teams to score "+pctf(T.bt,T.n)+" · over/under 2.5 "+pctf(T.ov,T.n)+". Small samples are noisy.</p>":"<p class='mid' style='margin:0'>Not enough finished games yet.</p>");
- h+="<p><button class='alt' id='lgg'>See this league’s games</button></p>";
- b.innerHTML=h;var gb=document.getElementById("lgg");if(gb)gb.onclick=function(){showTab("games")}
-}
-document.getElementById("fl").onchange=function(){LGF=this.value;refreshViews()};
-document.getElementById("fs").onchange=function(){STF=this.value;list()};
-document.getElementById("fq").oninput=function(){QF=this.value.trim();list()};
-// Top 10 confident picks: double chance (1X / 12 / X2), sure wins and both teams to score, one pick per game
-var T10B={relaxed:{dc:70,w:50,b:58},conf:{dc:78,w:58,b:62},very:{dc:85,w:65,b:70}},T10CAP={dc:5,w:4,b:3},T10=[],T10N={dc:"Double chance",w:"Sure win",b:"Both teams to score"};
-function trend(k,ab,ko){var rs=R[k].filter(function(g){return(g.h==ab||g.a==ab)&&g.t<ko}).sort(function(a,b){return a.t-b.t}).slice(-8),o={n:rs.length,bt:0,cs:0,fs:0};
- rs.forEach(function(g){var f=g.h==ab?g.x[0]:g.x[1],a=g.h==ab?g.x[1]:g.x[0];if(f>0&&a>0)o.bt++;if(a==0)o.cs++;if(f==0)o.fs++});return o}
-function formL(i){return i.lines.slice(-5).map(function(x){return x.charAt(0)}).join("")||"no results yet"}
-function gpg2(x,i){return i.n?(x/i.n).toFixed(1):"-"}
-function t10Cands(){
- var d=document.getElementById("dt").value,L=T10B[document.getElementById("t10s").value]||T10B.conf,out=[];
- ALL.filter(function(g){return ld(g.t)==d&&(LGF=="all"||g.k==LGF)}).forEach(function(g){
-  var mt=META[g.x[3]];if(mt&&mt.s!="SCHEDULED"&&mt.s!="TIMED")return;
-  var md=mfor(g.k,g.h,g.a,g.t),r=md.r,H=md.h,A=md.a;
-  if(Math.min(H.n,A.n)<4&&!(H.elo&&A.elo))return;
-  var th=trend(g.k,g.h,g.t),ta=trend(g.k,g.a,g.t),lo=Math.min(H.n,A.n),flag=H.flags.concat(A.flags),
-   base=function(m,label,p,bar,extra){var c={g:g,md:md,m:m,label:label,p:p,sc:p-bar};
-    c.facts="xG "+r.lh.toFixed(1)+"-"+r.la.toFixed(1)+"; "+H.name+" "+formL(H)+" ("+gpg2(H.gf,H)+" scored, "+gpg2(H.ga,H)+" conceded a game); "+A.name+" "+formL(A)+" ("+gpg2(A.gf,A)+" scored, "+gpg2(A.ga,A)+" conceded a game)";
-    c.sum="Model: "+H.name+" "+pc(r.h)+"% · draw "+pc(r.d)+"% · "+A.name+" "+pc(r.a)+"%, expected goals "+r.lh.toFixed(1)+"–"+r.la.toFixed(1)+". "+H.name+": "+formL(H)+" in the last results, "+gpg2(H.gf,H)+" scored and "+gpg2(H.ga,H)+" conceded a game. "+A.name+": "+formL(A)+", "+gpg2(A.gf,A)+" scored and "+gpg2(A.ga,A)+" conceded a game. "+extra+(flag.length?" Watch: "+flag.join("; ")+".":"")+(lo<6?" Only "+lo+" games of data on one side, so treat with care.":"");return c};
-  var opts=[["1X",r.h+r.d,H.name+" or draw"],["12",r.h+r.a,"either team wins, no draw"],["X2",r.d+r.a,A.name+" or draw"]].sort(function(x,y){return y[1]-x[1]}),bd=opts[0];
-  if(bd[1]*100>=L.dc)out.push(base("dc",bd[0]+" ("+bd[2]+")",bd[1]*100,L.dc,"The pick "+(bd[0]=="1X"?"only fails if "+A.name+" win ("+pc(r.a)+"%).":bd[0]=="X2"?"only fails if "+H.name+" win ("+pc(r.h)+"%).":"only fails on a draw ("+pc(r.d)+"%).")));
-  if(r.key!="D"&&r.top*100>=L.w){var wn=r.key=="H"?H.name:A.name;out.push(base("w",wn+" to win",r.top*100,L.w,"It needs an outright win; a draw or defeat ("+(100-pc(r.top))+"%) loses it."))}
-  var by=r.bt>=0.5,bp=(by?r.bt:1-r.bt)*100;
-  if(bp>=L.b)out.push(base("b","Both teams to score: "+(by?"Yes":"No"),bp,L.b,by?"Both scored in "+th.bt+" of "+th.n+" recent games for "+H.name+" and "+ta.bt+" of "+ta.n+" for "+A.name+".":"Clean sheets in "+th.cs+" of "+th.n+" for "+H.name+" and "+ta.cs+" of "+ta.n+" for "+A.name+"; failed to score in "+th.fs+" and "+ta.fs+" respectively."))});
- return out}
-function t10Pick(jit){
- var cands=t10Cands(),lo=Math.min.apply(null,cands.map(function(c){return c.sc}).concat([0])),hi=Math.max.apply(null,cands.map(function(c){return c.sc}).concat([0])),amp=jit?jit*Math.max(5,hi-lo):0,cs=cands.map(function(c){c.k2=c.sc+Math.random()*amp;return c}).sort(function(a,b){return b.k2-a.k2}),chosen=[],used={},mc={dc:0,w:0,b:0},lc={};
- function take(f){cs.forEach(function(c){if(chosen.length>=10)return;var id=c.g.k+"|"+c.g.h+"|"+c.g.a;if(used[id]||!f(c))return;used[id]=1;chosen.push(c);mc[c.m]++;lc[c.g.k]=(lc[c.g.k]||0)+1})}
- take(function(c){return mc[c.m]<T10CAP[c.m]&&(lc[c.g.k]||0)<4});
- take(function(c){return mc[c.m]<T10CAP[c.m]});
- take(function(){return true});
- return chosen.sort(function(a,b){return b.sc-a.sc})}
-function renderTop10(){var box=document.getElementById("t10body");if(!box)return;T10=t10Pick(0);t10Draw()}
-function t10Draw(){
- var box=document.getElementById("t10body"),d=document.getElementById("dt").value;
- if(!T10.length){box.innerHTML="<p class='note'>No game meets this confidence bar on "+esc(d)+". The list is never padded with weaker picks. Try the Relaxed bar, another date, or all leagues.</p>";return}
- var cnt={dc:0,w:0,b:0},sum=0,all=1,lows=T10[0];T10.forEach(function(c){cnt[c.m]++;sum+=c.p;all*=c.p/100;if(c.p<lows.p)lows=c});
- var h="<div class='tiles'><div class='lvrow'><span class='mid'>Picks</span><br><span class='xg'>"+T10.length+"</span><br><span class='mid'>"+cnt.dc+" double chance · "+cnt.w+" sure wins · "+cnt.b+" BTTS</span></div><div class='lvrow'><span class='mid'>Average confidence</span><br><span class='xg'>"+Math.round(sum/T10.length)+"%</span></div><div class='lvrow'><span class='mid'>Expected to land</span><br><span class='xg'>"+(sum/100).toFixed(1)+" of "+T10.length+"</span></div><div class='lvrow'><span class='mid'>Chance all land</span><br><span class='xg'>"+(all*100<1?"under 1":Math.round(all*100))+"%</span></div></div>";
- h+="<p class='note' style='margin-top:0'>"+(T10.length<10?"Only "+T10.length+" games meet this bar, so I am not padding the list. ":"")+"If the percentages are accurate you would expect about "+(sum/100).toFixed(1)+" of these "+T10.length+" to win, and the chance that every one wins is only about "+(all*100<1?"under 1":Math.round(all*100))+"% (assuming the games are independent). Shakiest pick: "+esc(lows.md.h.name)+" v "+esc(lows.md.a.name)+" ("+Math.round(lows.p)+"%). These are estimates, not guarantees.</p>";
- T10.forEach(function(c,i){var tr=c.m=="dc"?tierOf(c.p,85,78):c.m=="w"?tierOf(c.p,65,58):tierOf(c.p,70,64);
-  h+="<div class='lvrow'><b>#"+(i+1)+" · "+esc(ht(c.g.t))+"</b> <span class='mid'>"+esc(D[c.g.k].n)+" · "+T10N[c.m]+"</span><br><b>"+esc(c.md.h.name)+" v "+esc(c.md.a.name)+"</b><br>"+esc(c.label)+" — <b>"+Math.round(c.p)+"%</b> <span class='tag "+tr[1]+"'>"+tr[0]+"</span><p style='margin:6px 0;font-size:14px'>"+esc(c.sum)+"</p><button class='alt sm' data-t10='"+i+"'>Open full analysis</button></div>"});
- box.innerHTML=h;
- box.querySelectorAll("button[data-t10]").forEach(function(x){x.onclick=function(){pick(T10[+x.dataset.t10].g)}})
-}
-function t10Text(){return"Ettylinks Top "+T10.length+" confident picks, "+document.getElementById("dt").value+"\n"+T10.map(function(c,i){return(i+1)+". "+ht(c.g.t)+" "+c.md.h.name+" v "+c.md.a.name+" — "+c.label+" ("+Math.round(c.p)+"%)"}).join("\n")+"\nEstimates, not guarantees. Bet responsibly."}
-function aiErrHtml(j){var e=j.error,adm=ME&&ME.role=="admin";return'<p class="note">'+esc(e=="no_ai_key"?"Claude second opinions are not switched on yet. The developer must add ANTHROPIC_API_KEY (see README).":e=="user_limit"?"You have used today’s "+j.limit+" Claude checks. Try again tomorrow.":e=="site_limit"?"The site’s daily Claude limit is used up. Try again tomorrow.":"Claude could not be reached right now. Try again shortly."+(adm&&j.status?" (HTTP "+j.status+(j.message?": "+j.message:"")+")":""))+"</p>"}
-function aiHtml(j){var cls=j.stance=="agree"?"good":j.stance=="disagree"?"bad":"mid",lab=j.stance=="agree"?"Claude agrees":j.stance=="disagree"?"Claude disagrees":"Claude says be careful";
- return'<div class="lvrow"><span class="tag '+cls+'">'+lab+'</span> <span class="mid">confidence: '+esc(j.confidence)+(j.cached?" · saved answer":"")+'</span><p style="margin:8px 0 0">'+esc(j.summary)+"</p>"+(j.risks&&j.risks.length?"<ul style='margin:6px 0 0 18px;padding:0'>"+j.risks.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul>":"")+'<p class="mid" style="margin:8px 0 0;font-size:13px">AI commentary on the model’s numbers, not a guarantee. Claude cannot see line-ups or injuries.</p></div>'}
-async function t10Review(){var b=document.getElementById("t10ai");if(!T10.length){b.textContent="Nothing to review yet.";return}b.textContent="Asking Claude…";
- var r=await api("ai",{ctx:{kind:"top10",date:document.getElementById("dt").value,picks:T10.map(function(c){return{match:c.md.h.name+" v "+c.md.a.name,league:D[c.g.k].n,market:c.label,modelPct:Math.round(c.p),facts:c.facts}})}});
- b.innerHTML=r.ok?aiHtml(r.j):aiErrHtml(r.j||{})}
-document.getElementById("t10s").onchange=renderTop10;
-document.getElementById("t10b").onclick=renderTop10;
-document.getElementById("t10r").onclick=function(){T10=t10Pick(0.8);t10Draw()};
-document.getElementById("t10a").onclick=t10Review;
-document.getElementById("t10c").onclick=function(){var tx=t10Text(),b=document.getElementById("t10ai");
- if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(function(){b.innerHTML="<p class='note'>Copied. Paste it into WhatsApp or a note.</p>"},function(){b.innerHTML="<textarea readonly>"+esc(tx)+"</textarea>"});
- else b.innerHTML="<textarea readonly>"+esc(tx)+"</textarea>"};
+
 document.getElementById("go").onclick=run;
-document.getElementById("hb").onclick=runHistory;
-document.getElementById("man").onclick=function(){ctx="";PROV=null;FH=1;FA=1;LK=null;EH=null;EA=null;CTXD=null;document.getElementById("form").open=true;document.getElementById("hn").focus()};
-document.getElementById("dt").onchange=loadDay;document.getElementById("pk").onchange=renderPicks;
-document.getElementById("sc").onchange=summary;
+document.getElementById("man").onclick=function(){ctx="";RES="";WTC="";CUR=null;FH=1;FA=1;document.getElementById("form").open=true;document.getElementById("hn").focus()};
+document.getElementById("dt").onchange=function(){RETRY=0;CUR=null;loadGames()};
+document.getElementById("prev").onclick=function(){shiftDay(-1)};
+document.getElementById("next").onclick=function(){shiftDay(1)};
+document.getElementById("today").onclick=function(){document.getElementById("dt").value=ld(new Date());RETRY=0;CUR=null;loadGames()};
+document.getElementById("rp").onchange=loadRecord;
 init();
 if("serviceWorker" in navigator&&location.protocol.indexOf("http")==0){navigator.serviceWorker.register("sw.js").catch(function(){})}
 </script>
